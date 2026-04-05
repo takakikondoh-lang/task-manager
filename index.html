@@ -265,6 +265,7 @@ const STORAGE_KEY='tkm_tasks_v1';
 const COLLAPSED_KEY='tkm_collapsed_v1';
 const CATORDER_KEY='tkm_catorder_v1';
 const GAS_URL='https://script.google.com/macros/s/AKfycbxFy7_9z8Mdgd_uR4VKdqPHvCx7czYhoNfzJf8234XDEYua0v5gaEbwRcu0mB5af7QVzQ/exec';
+const SECRET_TOKEN='tkm-2026-kondoh';
 
 let tasks=[];
 let nextId=1;
@@ -316,7 +317,7 @@ function setSyncStatus(type,msg){
 async function loadFromCloud(){
   setSyncStatus('ing','クラウド確認中…');
   try{
-    const res=await fetch(GAS_URL+'?t='+Date.now(),{redirect:'follow'});
+    const res=await fetch(GAS_URL+'?t='+Date.now()+'&token='+SECRET_TOKEN,{redirect:'follow'});
     const text=await res.text();
     if(!text||text==='{}')return setSyncStatus('ok','クラウド: データなし');
     let cloud;
@@ -348,7 +349,7 @@ async function loadFromCloud(){
 }
 
 async function pushToCloudNow(){
-  const payload=JSON.stringify({tasks,nextId,catOrder,collapsed,updatedAt:Date.now()});
+  const payload=JSON.stringify({tasks,nextId,catOrder,collapsed,updatedAt:Date.now(),token:SECRET_TOKEN});
   try{
     const res=await fetch(GAS_URL,{method:'POST',body:payload,redirect:'follow'});
     await res.text();
