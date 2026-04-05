@@ -239,7 +239,7 @@ const CAT_COLORS=[
   {bg:'#F1EFE8',border:'#D3D1C7',icon:'#5F5E5A',text:'#444441',prog:'#888780'},
   {bg:'#FCEBEB',border:'#F7C1C1',icon:'#A32D2D',text:'#791F1F',prog:'#E24B4A'},
 ];
-const CATS=['社史・周年史','座談会・インタビュー','文字起こし・校正','書籍・創作','講師業','プライベート','その他'];
+const CATS=['仕事','講師','プライベート','その他'];
 const STATUSES=['進行中','完了'];
 const PRIOS=['高','中','低'];
 const STORAGE_KEY='tkm_tasks_v1';
@@ -258,7 +258,8 @@ function load(){
   try{
     const raw=localStorage.getItem(STORAGE_KEY);
     if(raw){const d=JSON.parse(raw);tasks=d.tasks||[];nextId=d.nextId||tasks.length+1;
-      tasks.forEach((t,i)=>{if(t.order==null)t.order=i;if(t.status==='未着手')t.status='進行中';});
+      const catMap={'社史・周年史':'仕事','座談会・インタビュー':'仕事','文字起こし・校正':'仕事','書籍・創作':'仕事','講師業':'講師'};
+      tasks.forEach((t,i)=>{if(t.order==null)t.order=i;if(t.status==='未着手')t.status='進行中';if(catMap[t.cat])t.cat=catMap[t.cat];});
     }
     else{tasks=defaultTasks();nextId=tasks.length+1;}
     const c=localStorage.getItem(COLLAPSED_KEY);
@@ -310,7 +311,8 @@ async function loadFromCloud(){
       nextId=cloud.nextId||tasks.length+1;
       if(cloud.catOrder)catOrder=cloud.catOrder;
       if(cloud.collapsed)collapsed=cloud.collapsed;
-      tasks.forEach((t,i)=>{if(t.order==null)t.order=i;if(t.status==='未着手')t.status='進行中';});
+      const catMap={'社史・周年史':'仕事','座談会・インタビュー':'仕事','文字起こし・校正':'仕事','書籍・創作':'仕事','講師業':'講師'};
+      tasks.forEach((t,i)=>{if(t.order==null)t.order=i;if(t.status==='未着手')t.status='進行中';if(catMap[t.cat])t.cat=catMap[t.cat];});
       try{
         localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:cloudUpdated}));
         localStorage.setItem(COLLAPSED_KEY,JSON.stringify(collapsed));
@@ -338,21 +340,21 @@ async function pushToCloudNow(){
 }
 function defaultTasks(){
   return [
-    {id:1,title:'コスモシステム40周年　トップインタビュー原稿仕上げ',cat:'社史・周年史',prio:'高',deadline:'2026-04-15',status:'進行中',memo:'',order:0},
-    {id:2,title:'エース設計産業　SIer化テーマ原稿（8000字）',cat:'社史・周年史',prio:'高',deadline:'2026-04-20',status:'進行中',memo:'',order:1},
-    {id:3,title:'三浦産業　住宅事業成長期（1999-2017）長編原稿',cat:'社史・周年史',prio:'中',deadline:'2026-04-30',status:'進行中',memo:'',order:2},
-    {id:4,title:'木村工機　エアビーム製品技術史',cat:'社史・周年史',prio:'中',deadline:'2026-05-10',status:'進行中',memo:'',order:3},
-    {id:5,title:'京都芸術大学50周年　文字起こし校正',cat:'文字起こし・校正',prio:'高',deadline:'2026-04-12',status:'進行中',memo:'AIによる誤認識修正・固有名詞確認',order:0},
-    {id:6,title:'関西外国語大学80周年座談会　再構成・誌面設計',cat:'座談会・インタビュー',prio:'中',deadline:'2026-04-25',status:'進行中',memo:'',order:0},
-    {id:7,title:'村上衡器製作所120年史　トップインタビュー記事',cat:'座談会・インタビュー',prio:'低',deadline:'2026-05-15',status:'進行中',memo:'',order:1},
-    {id:8,title:'『物語とは何か』　校正・章立て確認',cat:'書籍・創作',prio:'中',deadline:'2026-05-31',status:'進行中',memo:'',order:0},
+    {id:1,title:'コスモシステム40周年　トップインタビュー原稿仕上げ',cat:'仕事',prio:'高',deadline:'2026-04-15',status:'進行中',memo:'',order:0},
+    {id:2,title:'エース設計産業　SIer化テーマ原稿（8000字）',cat:'仕事',prio:'高',deadline:'2026-04-20',status:'進行中',memo:'',order:1},
+    {id:3,title:'三浦産業　住宅事業成長期（1999-2017）長編原稿',cat:'仕事',prio:'中',deadline:'2026-04-30',status:'進行中',memo:'',order:2},
+    {id:4,title:'木村工機　エアビーム製品技術史',cat:'仕事',prio:'中',deadline:'2026-05-10',status:'進行中',memo:'',order:3},
+    {id:5,title:'京都芸術大学50周年　文字起こし校正',cat:'仕事',prio:'高',deadline:'2026-04-12',status:'進行中',memo:'AIによる誤認識修正・固有名詞確認',order:4},
+    {id:6,title:'関西外国語大学80周年座談会　再構成・誌面設計',cat:'仕事',prio:'中',deadline:'2026-04-25',status:'進行中',memo:'',order:5},
+    {id:7,title:'村上衡器製作所120年史　トップインタビュー記事',cat:'仕事',prio:'低',deadline:'2026-05-15',status:'進行中',memo:'',order:6},
+    {id:8,title:'『物語とは何か』　校正・章立て確認',cat:'仕事',prio:'中',deadline:'2026-05-31',status:'進行中',memo:'',order:7},
   ];
 }
 
 function today(){return new Date().toISOString().slice(0,10);}
 function isOver(d,st){return d&&d<today()&&st==='進行中';}
 function catColor(cat){return CAT_COLORS[CATS.indexOf(cat)%CAT_COLORS.length]||CAT_COLORS[0];}
-function catInitial(cat){const m={'社史・周年史':'社','座談会・インタビュー':'座','文字起こし・校正':'文','書籍・創作':'書','講師業':'講','プライベート':'私','その他':'他'};return m[cat]||cat[0];}
+function catInitial(cat){const m={'仕事':'仕','講師':'講','プライベート':'私','その他':'他'};return m[cat]||cat[0];}
 
 function advanceRepeating(){
   const todayStr=today();
@@ -666,7 +668,7 @@ async function syncToGcal(){
     let added=0,updated=0,skipped=0;
 
     for(const t of targets){
-      const summary=`[${t.cat}] ${t.title}`;
+      const summary=t.title;
       const desc=`優先度: ${t.prio}${t.memo?'\n'+t.memo:''}${t.repeat?'\n繰り返し: '+(t.repeat==='weekly'?'毎週':'隔週'):''}`;
       const event={
         summary,
