@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>タスク管理 — 近藤隆己</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='42' fill='%23E6F3FC'/%3E%3Cpath d='M38 138 Q62 98 90 76 Q112 58 138 44' stroke='%23C2DEF5' stroke-width='22' stroke-linecap='round' fill='none' opacity='.35'/%3E%3Cpath d='M38 138 Q62 98 90 76 Q112 58 138 44' stroke='%2388BEE8' stroke-width='8' stroke-linecap='round' fill='none' opacity='.3'/%3E%3Cpath d='M38 138 Q62 98 90 76 Q112 58 138 44' stroke='%234F9FD8' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='38' cy='138' r='7' fill='%234F9FD8'/%3E%3Ccircle cx='38' cy='138' r='12' fill='%234F9FD8' opacity='.15'/%3E%3Ccircle cx='72' cy='102' r='5.5' fill='%234F9FD8' opacity='.75'/%3E%3Ccircle cx='100' cy='80' r='4.5' fill='%234F9FD8' opacity='.6'/%3E%3Ccircle cx='120' cy='65' r='3.5' fill='%234F9FD8' opacity='.45'/%3E%3Ccircle cx='138' cy='44' r='3' fill='%234F9FD8' opacity='.35'/%3E%3Ccircle cx='148' cy='36' r='2.5' fill='%2388BEE8' opacity='.5'/%3E%3Ccircle cx='154' cy='28' r='1.8' fill='%2388BEE8' opacity='.35'/%3E%3Ccircle cx='144' cy='26' r='1.4' fill='%23C2DEF5' opacity='.5'/%3E%3Crect x='56' y='108' width='40' height='6' rx='3' fill='%234F9FD8' opacity='.25'/%3E%3Crect x='48' y='120' width='28' height='6' rx='3' fill='%234F9FD8' opacity='.18'/%3E%3Crect x='64' y='132' width='46' height='6' rx='3' fill='%2388BEE8' opacity='.22'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='42' fill='%23E6F3FC'/%3E%3Cpath d='M38 138 Q62 98 90 76 Q112 58 138 44' stroke='%23C2DEF5' stroke-width='22' stroke-linecap='round' fill='none' opacity='.35'/%3E%3Cpath d='M38 138 Q62 98 90 76 Q112 58 138 44' stroke='%2388BEE8' stroke-width='8' stroke-linecap='round' fill='none' opacity='.3'/%3E%3Cpath d='M38 138 Q62 98 90 76 Q112 58 138 44' stroke='%234F9FD8' stroke-width='2.5' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='38' cy='138' r='7' fill='%234F9FD8'/%3E%3Ccircle cx='38' cy='138' r='12' fill='%234F9FD8' opacity='.15'/%3E%3Ccircle cx='72' cy='102' r='5.5' fill='%234F9FD8' opacity='.75'/%3E%3Ccircle cx='100' cy='80' r='4.5' fill='%234F9FD8' opacity='.6'/%3E%3Ccircle cx='120' cy='65' r='3.5' fill='%234F9FD8' opacity='.45'/%3E%3Ccircle cx='138' cy='44' r='3' fill='%234F9FD8' opacity='.35'/%3E%3Ccircle cx='148' cy='36' r='2.5' fill='%2388BEE8' opacity='.5'/%3E%3Ccircle cx='154' cy='28' r='1.8' fill='%2388BEE8' opacity='.35'/%3E%3Ccircle cx='144' cy='26' r='1.4' fill='%23C2DEF5' opacity='.5'/%3E%3Crect x='56' y='108' width='40' height='6' rx='3' fill='%234F9FD8' opacity='.25'/%3E%3Crect x='48' y='120' width='28' height='6' rx='3' fill='%234F9FD8' opacity='.18'/%3E%3Crect x='64' y='132' width='46' height='6' rx='3' fill='%2388BEE8' opacity='.22'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -28,7 +30,7 @@ body{display:flex;min-height:100vh}
 /* Sidebar */
 .sidebar{width:200px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:1.5rem 1rem 2rem;display:flex;flex-direction:column;gap:0;position:sticky;top:0;height:100vh;overflow-y:auto}
 .sidebar-title{font-size:11px;font-weight:700;color:var(--purple-600);font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
-.sidebar-app{font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.02em;margin-bottom:1.5rem}
+.sidebar-app{font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.02em;margin-bottom:1.5rem;display:flex;align-items:center;gap:10px}
 
 /* Stat buttons in sidebar */
 .stats{display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem}
@@ -163,7 +165,26 @@ body{display:flex;min-height:100vh}
 
 <aside class="sidebar">
   <div class="sidebar-title">TASK MANAGER</div>
-  <div class="sidebar-app">タスク管理</div>
+  <div class="sidebar-app">
+    <svg width="32" height="32" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;border-radius:8px">
+      <rect width="180" height="180" rx="42" fill="#E6F3FC"/>
+      <path d="M38 138 Q62 98 90 76 Q112 58 138 44" stroke="#C2DEF5" stroke-width="22" stroke-linecap="round" fill="none" opacity=".35"/>
+      <path d="M38 138 Q62 98 90 76 Q112 58 138 44" stroke="#88BEE8" stroke-width="8" stroke-linecap="round" fill="none" opacity=".3"/>
+      <path d="M38 138 Q62 98 90 76 Q112 58 138 44" stroke="#4F9FD8" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+      <circle cx="38" cy="138" r="7" fill="#4F9FD8"/>
+      <circle cx="38" cy="138" r="12" fill="#4F9FD8" opacity=".15"/>
+      <circle cx="72" cy="102" r="5.5" fill="#4F9FD8" opacity=".75"/>
+      <circle cx="100" cy="80" r="4.5" fill="#4F9FD8" opacity=".6"/>
+      <circle cx="120" cy="65" r="3.5" fill="#4F9FD8" opacity=".45"/>
+      <circle cx="138" cy="44" r="3" fill="#4F9FD8" opacity=".35"/>
+      <circle cx="148" cy="36" r="2.5" fill="#88BEE8" opacity=".5"/>
+      <circle cx="154" cy="28" r="1.8" fill="#88BEE8" opacity=".35"/>
+      <rect x="56" y="108" width="40" height="6" rx="3" fill="#4F9FD8" opacity=".25"/>
+      <rect x="48" y="120" width="28" height="6" rx="3" fill="#4F9FD8" opacity=".18"/>
+      <rect x="64" y="132" width="46" height="6" rx="3" fill="#88BEE8" opacity=".22"/>
+    </svg>
+    タスク管理
+  </div>
   <div class="stats" id="stats"></div>
   <div class="sidebar-add">
     <button class="add-btn" onclick="openAdd()"><span class="plus">＋</span>タスク追加</button>
