@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>タスク管理 — 近藤隆己</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --purple-50:#EEEDFE;--purple-100:#CECBF6;--purple-200:#AFA9EC;--purple-400:#7F77DD;--purple-600:#534AB7;--purple-800:#3C3489;--purple-900:#26215C;
+  --teal-50:#E1F5EE;--teal-100:#9FE1CB;--teal-400:#1D9E75;--teal-600:#0F6E56;--teal-800:#085041;
+  --coral-50:#FAECE7;--coral-100:#F5C4B3;--coral-200:#F0997B;--coral-400:#D85A30;--coral-600:#993C1D;--coral-800:#712B13;
+  --amber-50:#FAEEDA;--amber-100:#FAC775;--amber-400:#BA7517;--amber-600:#854F0B;--amber-800:#633806;
+  --blue-50:#E6F1FB;--blue-100:#B5D4F4;--blue-400:#378ADD;--blue-600:#185FA5;--blue-800:#0C447C;
+  --green-50:#EAF3DE;--green-100:#C0DD97;--green-400:#639922;--green-600:#3B6D11;--green-800:#27500A;
+  --pink-50:#FBEAF0;--pink-100:#F4C0D1;--pink-400:#D4537E;--pink-600:#993556;--pink-800:#72243E;
+  --gray-50:#F1EFE8;--gray-100:#D3D1C7;--gray-400:#888780;--gray-600:#5F5E5A;--gray-800:#444441;
+  --bg:#FAFAF8;--surface:#FFFFFF;--text:#1A1A18;--text-2:#5C5C58;--text-3:#9C9C96;
+  --border:#E4E4DE;--border-2:#CCCCC4;
+  --radius-sm:6px;--radius-md:10px;--radius-lg:14px;--radius-xl:20px;
+  --font:'Noto Sans JP',sans-serif;--mono:'DM Mono',monospace;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.6}
+body{display:flex;min-height:100vh}
+
+/* Sidebar */
+.sidebar{width:200px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:1.5rem 1rem 2rem;display:flex;flex-direction:column;gap:0;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sidebar-title{font-size:11px;font-weight:700;color:var(--purple-600);font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.sidebar-app{font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.02em;margin-bottom:1.5rem}
+
+/* Stat buttons in sidebar */
+.stats{display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem}
+.stat{border-radius:var(--radius-lg);padding:12px 14px;border:1.5px solid transparent;transition:transform .1s,box-shadow .1s;cursor:pointer;user-select:none;text-align:left}
+.stat:hover{transform:translateX(2px);box-shadow:2px 2px 8px rgba(0,0,0,.07)}
+.stat.active{border-width:2px;box-shadow:2px 2px 10px rgba(0,0,0,.1)}
+.stat-n{font-size:22px;font-weight:700;font-family:var(--mono);line-height:1}
+.stat-l{font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-top:3px}
+.stat-all{background:var(--purple-50);border-color:var(--purple-200)}.stat-all .stat-n{color:var(--purple-800)}.stat-all .stat-l{color:var(--purple-600)}.stat-all.active{border-color:var(--purple-600)}
+.stat-wip{background:var(--blue-50);border-color:var(--blue-100)}.stat-wip .stat-n{color:var(--blue-800)}.stat-wip .stat-l{color:var(--blue-600)}.stat-wip.active{border-color:var(--blue-600)}
+.stat-done{background:var(--green-50);border-color:var(--green-100)}.stat-done .stat-n{color:var(--green-800)}.stat-done .stat-l{color:var(--green-600)}.stat-done.active{border-color:var(--green-600)}
+.stat-hi{background:var(--coral-50);border-color:var(--coral-100)}.stat-hi .stat-n{color:var(--coral-800)}.stat-hi .stat-l{color:var(--coral-600)}.stat-hi.active{border-color:var(--coral-600)}
+.stat-priv{background:#FCEBEB;border-color:#F7C1C1}.stat-priv .stat-n{color:#791F1F}.stat-priv .stat-l{color:#A32D2D}.stat-priv.active{border-color:#A32D2D}
+
+.sidebar-add{margin-top:auto;padding-top:1.5rem}
+.add-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px 0;background:var(--purple-600);color:#fff;border:none;border-radius:var(--radius-md);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--font);transition:background .15s}
+.add-btn:hover{background:var(--purple-800)}
+.add-btn .plus{font-size:18px;line-height:1;margin-top:-1px}
+.save-note{font-size:10px;color:var(--text-3);font-family:var(--mono);margin-top:8px;text-align:center}
+.sync-status{font-size:10px;font-family:var(--mono);margin-top:4px;text-align:center;min-height:14px}
+.sync-ok{color:var(--green-600)}.sync-ing{color:var(--amber-600)}.sync-err{color:var(--coral-600)}
+.backup-btn{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;margin-top:6px;padding:7px 0;font-size:12px;font-weight:500;border-radius:var(--radius-md);border:1.5px solid var(--border);background:transparent;color:var(--text-2);cursor:pointer;font-family:var(--font);transition:all .15s}
+.backup-btn:hover{background:var(--bg);border-color:var(--border-2);color:var(--text)}
+.restore-btn{color:var(--text-3)}
+
+/* Main content */
+.main{flex:1;min-width:0;padding:1.5rem 1.5rem 4rem}
+
+/* Toolbar */
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.25rem}
+.toolbar input[type=text],.toolbar select{font-size:13px;padding:6px 10px;border-radius:var(--radius-md);border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);height:34px;outline:none;transition:border-color .15s}
+.toolbar input[type=text]{flex:1;min-width:120px}
+.toolbar input[type=text]:focus,.toolbar select:focus{border-color:var(--purple-400)}
+.toolbar select{cursor:pointer}
+
+/* Group */
+.group{border-radius:var(--radius-lg);overflow:hidden;margin-bottom:12px;border:1.5px solid transparent;transition:box-shadow .15s}
+.group:hover{box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.group-header{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none;transition:filter .1s}
+.group-header:hover{filter:brightness(.97)}
+.g-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;color:#fff}
+.g-name{font-size:13px;font-weight:700;flex:1;letter-spacing:-.01em}
+.g-meta{font-size:11px;font-weight:500;opacity:.7;font-family:var(--mono)}
+.g-prog-wrap{width:72px;height:5px;border-radius:3px;background:rgba(0,0,0,.12);overflow:hidden;flex-shrink:0}
+.g-prog{height:100%;border-radius:3px;transition:width .4s cubic-bezier(.4,0,.2,1)}
+.g-chevron{font-size:9px;opacity:.5;transition:transform .2s;flex-shrink:0}
+.g-chevron.open{transform:rotate(90deg)}
+
+/* Task rows */
+.group-body{background:var(--surface)}
+.task-row{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--border);transition:background .1s}
+.task-row:last-child{border-bottom:none}
+.t-check{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border-2);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;background:transparent}
+.t-check.done{background:var(--green-400);border-color:var(--green-400)}
+.t-check.done::after{content:'✓';color:#fff;font-size:10px;line-height:1}
+.t-check.wip{background:transparent;border-color:var(--border-2)}
+.t-title{flex:1;font-size:13px;color:var(--text);line-height:1.4;min-width:0}
+.t-title.is-done{color:var(--text-3);text-decoration:line-through}
+.t-memo{font-size:11px;color:var(--text-3);margin-top:2px}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap;flex-shrink:0;font-family:var(--mono)}
+.p-high{background:var(--coral-50);color:var(--coral-600);border:1px solid var(--coral-100)}
+.p-mid{background:var(--amber-50);color:var(--amber-600);border:1px solid var(--amber-100)}
+.p-low{background:var(--green-50);color:var(--green-600);border:1px solid var(--green-100)}
+.s-wip{background:var(--blue-50);color:var(--blue-600);border:1px solid var(--blue-100)}
+.s-done{background:var(--green-50);color:var(--green-600);border:1px solid var(--green-100)}
+.row-high{background:#FEF2F2}
+.row-mid{background:var(--surface)}
+.row-low{background:#F5F5F3}
+.row-done{background:var(--surface);opacity:.5}
+.task-row.row-high:hover{background:#FDE8E8}
+.task-row.row-mid:hover{background:var(--bg)}
+.task-row.row-low:hover{background:#ECECEA}
+.repeat-badge{font-size:11px;color:var(--purple-600);font-family:var(--mono);flex-shrink:0;white-space:nowrap}
+.dl-txt{font-size:11px;color:var(--text-3);flex-shrink:0;min-width:74px;text-align:right;font-family:var(--mono)}
+.dl-over{color:var(--coral-600);font-weight:700}
+.act-btn{width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);border:none;background:transparent;color:var(--text-3);cursor:pointer;transition:all .15s;flex-shrink:0}
+.act-btn:hover{background:var(--bg);color:var(--text-2)}
+.del-btn:hover{background:var(--coral-50);color:var(--coral-600)}
+.drag-handle{width:16px;height:16px;flex-shrink:0;cursor:grab;opacity:.25;display:flex;flex-direction:column;justify-content:center;gap:3px;padding:1px}
+.drag-handle:hover{opacity:.6}
+.drag-handle span{display:block;height:1.5px;background:var(--text);border-radius:1px}
+.drag-handle:active{cursor:grabbing}
+.task-row.dragging{opacity:.4;background:var(--purple-50)}
+.task-row.drag-over{border-top:2px solid var(--purple-400)}
+.group.cat-dragging{opacity:.4}
+.group.cat-drag-over{outline:2px solid var(--purple-400);outline-offset:-2px}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-xl);border:1.5px solid var(--border);padding:1.5rem;width:min(420px,94vw);animation:modalIn .18s cubic-bezier(.4,0,.2,1)}
+@keyframes modalIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:1.25rem;color:var(--text)}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--text-2);margin-bottom:4px;letter-spacing:.05em;text-transform:uppercase}
+.field input,.field select,.field textarea{width:100%;font-size:13px;padding:7px 10px;border-radius:var(--radius-md);border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);outline:none;transition:border-color .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--purple-400)}
+.field textarea{height:56px;resize:vertical}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mbtns{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
+.mbtns button{height:34px;padding:0 16px;font-size:13px;border-radius:var(--radius-md);border:1.5px solid var(--border);cursor:pointer;background:transparent;color:var(--text);font-family:var(--font);font-weight:500;transition:all .15s}
+.mbtns button:hover{background:var(--bg)}
+.mbtns .ok{background:var(--purple-600);color:#fff;border-color:var(--purple-600)}
+.mbtns .ok:hover{background:var(--purple-800);border-color:var(--purple-800)}
+
+.empty-group{text-align:center;color:var(--text-3);padding:1.5rem;font-size:13px}
+.empty-search{text-align:center;color:var(--text-3);padding:3rem 0;font-size:13px;border:1.5px dashed var(--border);border-radius:var(--radius-lg)}
+
+@media(max-width:640px){
+  body{flex-direction:column}
+  .sidebar{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border);padding:1rem 1rem 0.75rem}
+  .sidebar-app{margin-bottom:0.75rem}
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:0.75rem}
+  .stat{padding:8px 10px}
+  .stat-n{font-size:18px}
+  .sidebar-add{margin-top:0.75rem;padding-top:0.75rem;display:flex;flex-wrap:wrap;align-items:center;gap:6px;border-top:1px solid var(--border)}
+  .add-btn{width:auto;padding:8px 16px;flex:1}
+  .save-note{margin-top:0;flex-basis:100%;text-align:left}
+  .sync-status{flex-basis:100%;text-align:left;margin-top:0}
+  .backup-btn{flex:1;margin-top:0}
+  .dl-txt{display:none}
+  .col-cat-badge{display:none}
+  .main{padding:1rem 0.75rem 3rem}
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-title">TASK MANAGER</div>
+  <div class="sidebar-app">タスク管理</div>
+  <div class="stats" id="stats"></div>
+  <div class="sidebar-add">
+    <button class="add-btn" onclick="openAdd()"><span class="plus">＋</span>タスク追加</button>
+    <div class="save-note" id="save-note">自動保存: —</div>
+    <div class="sync-status" id="sync-status"></div>
+    <button class="backup-btn" onclick="exportBackup()" title="タスクデータをJSONファイルで保存">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8M5 7l3 3 3-3"/><rect x="2" y="11" width="12" height="3" rx="1"/></svg>
+      バックアップ
+    </button>
+    <label class="backup-btn restore-btn" title="バックアップファイルから復元">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14V6M5 9l3-3 3 3"/><rect x="2" y="2" width="12" height="3" rx="1"/></svg>
+      復元
+      <input type="file" accept=".json" onchange="importBackup(event)" style="display:none">
+    </label>
+  </div>
+</aside>
+
+<main class="main">
+<div class="toolbar">
+  <input type="text" id="search-input" placeholder="検索…" oninput="search=this.value;render()">
+  <select onchange="filterPrio=this.value;render()">
+    <option value="">すべての優先度</option>
+    <option>高</option><option>中</option><option>低</option>
+  </select>
+</div>
+
+<div id="groups"></div>
+</main>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <h3 id="modal-title">タスクを追加</h3>
+    <div class="field"><label>タイトル</label><input id="f-title" placeholder="例：○○社史　第3章原稿"></div>
+    <div class="field"><label>案件カテゴリ</label><select id="f-cat"></select></div>
+    <div class="field-row">
+      <div class="field"><label>優先度</label>
+        <select id="f-prio"><option>高</option><option selected>中</option><option>低</option></select>
+      </div>
+      <div class="field"><label>ステータス</label>
+        <select id="f-status"><option selected>進行中</option><option>完了</option></select>
+      </div>
+    </div>
+    <div class="field"><label>期限</label><input id="f-dl" type="date"></div>
+    <div class="field"><label>繰り返し</label>
+      <select id="f-repeat">
+        <option value="">なし</option>
+        <option value="weekly">毎週</option>
+        <option value="biweekly">隔週</option>
+      </select>
+    </div>
+    <div class="field"><label>メモ</label><textarea id="f-memo" placeholder="補足・進捗メモなど"></textarea></div>
+    <div class="mbtns">
+      <button onclick="closeModal()">キャンセル</button>
+      <button class="ok" onclick="save()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CAT_COLORS=[
+  {bg:'#EEEDFE',border:'#AFA9EC',icon:'#534AB7',text:'#3C3489',prog:'#7F77DD'},
+  {bg:'#E1F5EE',border:'#9FE1CB',icon:'#0F6E56',text:'#085041',prog:'#1D9E75'},
+  {bg:'#FAEEDA',border:'#FAC775',icon:'#854F0B',text:'#633806',prog:'#BA7517'},
+  {bg:'#FBEAF0',border:'#F4C0D1',icon:'#993556',text:'#72243E',prog:'#D4537E'},
+  {bg:'#E6F1FB',border:'#B5D4F4',icon:'#185FA5',text:'#0C447C',prog:'#378ADD'},
+  {bg:'#EAF3DE',border:'#C0DD97',icon:'#3B6D11',text:'#27500A',prog:'#639922'},
+  {bg:'#F1EFE8',border:'#D3D1C7',icon:'#5F5E5A',text:'#444441',prog:'#888780'},
+  {bg:'#FCEBEB',border:'#F7C1C1',icon:'#A32D2D',text:'#791F1F',prog:'#E24B4A'},
+];
+const CATS=['社史・周年史','座談会・インタビュー','文字起こし・校正','書籍・創作','講師業','プライベート','その他'];
+const STATUSES=['進行中','完了'];
+const PRIOS=['高','中','低'];
+const STORAGE_KEY='tkm_tasks_v1';
+const COLLAPSED_KEY='tkm_collapsed_v1';
+const CATORDER_KEY='tkm_catorder_v1';
+const GAS_URL='https://script.google.com/macros/s/AKfycbxFy7_9z8Mdgd_uR4VKdqPHvCx7czYhoNfzJf8234XDEYua0v5gaEbwRcu0mB5af7QVzQ/exec';
+
+let tasks=[];
+let nextId=1;
+let modal=null,editingId=null;
+let search='',filterStatus='',filterPrio='',filterCat='';
+let collapsed={};
+let catOrder=[...CATS];
+
+function load(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(raw){const d=JSON.parse(raw);tasks=d.tasks||[];nextId=d.nextId||tasks.length+1;
+      tasks.forEach((t,i)=>{if(t.order==null)t.order=i;if(t.status==='未着手')t.status='進行中';});
+    }
+    else{tasks=defaultTasks();nextId=tasks.length+1;}
+    const c=localStorage.getItem(COLLAPSED_KEY);
+    if(c)collapsed=JSON.parse(c);
+    const co=localStorage.getItem(CATORDER_KEY);
+    if(co){const saved=JSON.parse(co);catOrder=[...saved,...CATS.filter(c=>!saved.includes(c))];}
+  }catch(e){tasks=defaultTasks();nextId=tasks.length+1;}
+}
+
+function saveData(){
+  localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:Date.now()}));
+  localStorage.setItem(COLLAPSED_KEY,JSON.stringify(collapsed));
+  localStorage.setItem(CATORDER_KEY,JSON.stringify(catOrder));
+  const now=new Date();
+  document.getElementById('save-note').textContent='自動保存: '+now.getHours()+':'+String(now.getMinutes()).padStart(2,'0');
+  pushToCloud();
+}
+
+let syncTimer=null;
+function pushToCloud(){
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>{
+    setSyncStatus('ing','同期中…');
+    pushToCloudNow();
+  },1500);
+}
+
+function setSyncStatus(type,msg){
+  const el=document.getElementById('sync-status');
+  if(!el)return;
+  el.className='sync-status sync-'+type;
+  el.textContent=msg;
+}
+
+async function loadFromCloud(){
+  setSyncStatus('ing','クラウド確認中…');
+  try{
+    const res=await fetch(GAS_URL+'?t='+Date.now(),{redirect:'follow'});
+    const text=await res.text();
+    if(!text||text==='{}')return setSyncStatus('ok','クラウド: データなし');
+    let cloud;
+    try{cloud=JSON.parse(text);}catch(e){return setSyncStatus('err','データ形式エラー');}
+    if(!cloud.tasks)return setSyncStatus('ok','クラウド: データなし');
+    const localRaw=localStorage.getItem(STORAGE_KEY);
+    const localUpdated=localRaw?JSON.parse(localRaw).updatedAt||0:0;
+    const cloudUpdated=cloud.updatedAt||0;
+    if(cloudUpdated>localUpdated){
+      tasks=cloud.tasks;
+      nextId=cloud.nextId||tasks.length+1;
+      if(cloud.catOrder)catOrder=cloud.catOrder;
+      if(cloud.collapsed)collapsed=cloud.collapsed;
+      tasks.forEach((t,i)=>{if(t.order==null)t.order=i;if(t.status==='未着手')t.status='進行中';});
+      try{
+        localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:cloudUpdated}));
+        localStorage.setItem(COLLAPSED_KEY,JSON.stringify(collapsed));
+        localStorage.setItem(CATORDER_KEY,JSON.stringify(catOrder));
+      }catch(e){}
+      setSyncStatus('ok','クラウドから読み込み済み');
+    } else {
+      setSyncStatus('ok','ローカルが最新');
+    }
+    advanceRepeating();render();
+  }catch(e){
+    setSyncStatus('err','接続エラー');
+  }
+}
+
+async function pushToCloudNow(){
+  const payload=JSON.stringify({tasks,nextId,catOrder,collapsed,updatedAt:Date.now()});
+  try{
+    const res=await fetch(GAS_URL,{method:'POST',body:payload,redirect:'follow'});
+    await res.text();
+    setSyncStatus('ok','クラウド同期済み');
+  }catch(e){
+    setSyncStatus('err','同期エラー');
+  }
+}
+function defaultTasks(){
+  return [
+    {id:1,title:'コスモシステム40周年　トップインタビュー原稿仕上げ',cat:'社史・周年史',prio:'高',deadline:'2026-04-15',status:'進行中',memo:'',order:0},
+    {id:2,title:'エース設計産業　SIer化テーマ原稿（8000字）',cat:'社史・周年史',prio:'高',deadline:'2026-04-20',status:'進行中',memo:'',order:1},
+    {id:3,title:'三浦産業　住宅事業成長期（1999-2017）長編原稿',cat:'社史・周年史',prio:'中',deadline:'2026-04-30',status:'進行中',memo:'',order:2},
+    {id:4,title:'木村工機　エアビーム製品技術史',cat:'社史・周年史',prio:'中',deadline:'2026-05-10',status:'進行中',memo:'',order:3},
+    {id:5,title:'京都芸術大学50周年　文字起こし校正',cat:'文字起こし・校正',prio:'高',deadline:'2026-04-12',status:'進行中',memo:'AIによる誤認識修正・固有名詞確認',order:0},
+    {id:6,title:'関西外国語大学80周年座談会　再構成・誌面設計',cat:'座談会・インタビュー',prio:'中',deadline:'2026-04-25',status:'進行中',memo:'',order:0},
+    {id:7,title:'村上衡器製作所120年史　トップインタビュー記事',cat:'座談会・インタビュー',prio:'低',deadline:'2026-05-15',status:'進行中',memo:'',order:1},
+    {id:8,title:'『物語とは何か』　校正・章立て確認',cat:'書籍・創作',prio:'中',deadline:'2026-05-31',status:'進行中',memo:'',order:0},
+  ];
+}
+
+function today(){return new Date().toISOString().slice(0,10);}
+function isOver(d,st){return d&&d<today()&&st==='進行中';}
+function catColor(cat){return CAT_COLORS[CATS.indexOf(cat)%CAT_COLORS.length]||CAT_COLORS[0];}
+function catInitial(cat){const m={'社史・周年史':'社','座談会・インタビュー':'座','文字起こし・校正':'文','書籍・創作':'書','講師業':'講','プライベート':'私','その他':'他'};return m[cat]||cat[0];}
+
+function advanceRepeating(){
+  const todayStr=today();
+  let changed=false;
+  tasks.forEach(t=>{
+    if(!t.repeat||!t.deadline)return;
+    if(t.deadline<=todayStr){
+      const days=t.repeat==='weekly'?7:14;
+      const d=new Date(t.deadline+'T00:00:00');
+      while(d.toISOString().slice(0,10)<=todayStr) d.setDate(d.getDate()+days);
+      t.deadline=d.toISOString().slice(0,10);
+      t.status='進行中';
+      changed=true;
+    }
+  });
+  if(changed)saveData();
+}
+
+function render(){
+  const list=tasks.filter(t=>
+    (!search||t.title.includes(search)||t.memo.includes(search))&&
+    (!filterStatus||t.status===filterStatus)&&
+    (!filterPrio||t.prio===filterPrio)&&
+    (!filterCat||t.cat===filterCat)
+  );
+
+  const total=tasks.length,done=tasks.filter(t=>t.status==='完了').length;
+  const wip=tasks.filter(t=>t.status==='進行中').length;
+  const hi=tasks.filter(t=>t.prio==='高'&&t.status==='進行中').length;
+
+  const priv=tasks.filter(t=>t.cat==='プライベート').length;
+
+  const isAll=filterStatus===''&&filterPrio===''&&filterCat==='';
+  const isWip=filterStatus==='進行中'&&filterPrio===''&&filterCat==='';
+  const isDone=filterStatus==='完了'&&filterPrio===''&&filterCat==='';
+  const isHi=filterStatus==='進行中'&&filterPrio==='高'&&filterCat==='';
+  const isPriv=filterCat==='プライベート'&&filterStatus===''&&filterPrio==='';
+
+  document.getElementById('stats').innerHTML=`
+    <div class="stat stat-all${isAll?' active':''}" onclick="setFilter('','','')"><div class="stat-n">${total}</div><div class="stat-l">全タスク</div></div>
+    <div class="stat stat-wip${isWip?' active':''}" onclick="setFilter('進行中','','')"><div class="stat-n">${wip}</div><div class="stat-l">進行中</div></div>
+    <div class="stat stat-done${isDone?' active':''}" onclick="setFilter('完了','','')"><div class="stat-n">${done}</div><div class="stat-l">完了</div></div>
+    <div class="stat stat-hi${isHi?' active':''}" onclick="setFilter('進行中','高','')"><div class="stat-n">${hi}</div><div class="stat-l">高優先（未完）</div></div>
+    <div class="stat stat-priv${isPriv?' active':''}" onclick="setFilter('','','プライベート')"><div class="stat-n">${priv}</div><div class="stat-l">プライベート</div></div>`;
+
+  const usedCats=[...new Set(list.map(t=>t.cat))].sort((a,b)=>catOrder.indexOf(a)-catOrder.indexOf(b));
+  const el=document.getElementById('groups');
+
+  if(!usedCats.length){el.innerHTML='<div class="empty-search">該当するタスクがありません</div>';return;}
+
+  el.innerHTML=usedCats.map(cat=>{
+    const col=catColor(cat);
+    const items=list.filter(t=>t.cat===cat).sort((a,b)=>(a.order??0)-(b.order??0));
+    const doneCnt=items.filter(t=>t.status==='完了').length;
+    const pct=items.length?Math.round(doneCnt/items.length*100):0;
+    const isOpen=!collapsed[cat];
+    const rows=isOpen?items.map(t=>{
+      const pc=t.prio==='高'?'p-high':t.prio==='中'?'p-mid':'p-low';
+      const isDone=t.status==='完了';
+      const rowBg=isDone?'row-done':t.prio==='高'?'row-high':t.prio==='中'?'row-mid':'row-low';
+      const chkCls=isDone?'done':'wip';
+      const over=isOver(t.deadline,t.status);
+      const repeatLabel=t.repeat==='weekly'?'↻毎週':t.repeat==='biweekly'?'↻隔週':'';
+      return `<div class="task-row ${rowBg}" draggable="true" data-id="${t.id}" data-cat="${cat}">
+        <div class="drag-handle" title="ドラッグで並べ替え"><span></span><span></span><span></span></div>
+        <div class="t-check ${chkCls}" onclick="toggleDone(${t.id})" title="クリックで完了/進行中を切替"></div>
+        <div class="t-title${isDone?' is-done':''}">
+          ${t.title}${t.memo?`<div class="t-memo">${t.memo}</div>`:''}
+        </div>
+        <span class="badge ${pc} col-cat-badge">${t.prio}</span>
+        ${repeatLabel?`<span class="repeat-badge">${repeatLabel}</span>`:''}
+        <span class="dl-txt${over?' dl-over':''}">${t.deadline||'—'}</span>
+        <button class="act-btn" onclick="openEdit(${t.id})" title="編集"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z"/></svg></button>
+        <button class="act-btn del-btn" onclick="del(${t.id})" title="削除"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,5 13,5"/><path d="M6 5V3h4v2"/><path d="M4 5l1 8h6l1-8"/></svg></button>
+      </div>`;
+    }).join(''):'';
+
+    return `<div class="group" draggable="false" data-cat="${cat}" style="background:${col.bg};border-color:${col.border}">
+      <div class="group-header" onclick="toggleGroup('${cat}')">
+        <div class="drag-handle cat-drag-handle" title="ドラッグでカテゴリを並べ替え" onclick="event.stopPropagation()"><span></span><span></span><span></span></div>
+        <div class="g-icon" style="background:${col.icon}">${catInitial(cat)}</div>
+        <div class="g-name" style="color:${col.text}">${cat}</div>
+        <div class="g-meta" style="color:${col.text}">${items.length}件 · ${pct}%完了</div>
+        <div class="g-prog-wrap"><div class="g-prog" style="width:${pct}%;background:${col.prog}"></div></div>
+        <div class="g-chevron${isOpen?' open':''}" style="color:${col.text}">▶</div>
+      </div>
+      ${isOpen?`<div class="group-body">${rows||'<div class="empty-group">タスクがありません</div>'}</div>`:''}
+    </div>`;
+  }).join('');
+  bindDrag();
+  bindCatDrag();
+}
+
+let dragSrcId=null;
+
+function bindDrag(){
+  document.querySelectorAll('.task-row[draggable]').forEach(row=>{
+    row.addEventListener('dragstart',e=>{
+      dragSrcId=parseInt(row.dataset.id);
+      setTimeout(()=>row.classList.add('dragging'),0);
+      e.dataTransfer.effectAllowed='move';
+    });
+    row.addEventListener('dragend',()=>{
+      document.querySelectorAll('.task-row').forEach(r=>r.classList.remove('dragging','drag-over'));
+    });
+    row.addEventListener('dragover',e=>{
+      e.preventDefault();
+      e.dataTransfer.dropEffect='move';
+      document.querySelectorAll('.task-row').forEach(r=>r.classList.remove('drag-over'));
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave',()=>row.classList.remove('drag-over'));
+    row.addEventListener('drop',e=>{
+      e.preventDefault();
+      const targetId=parseInt(row.dataset.id);
+      if(dragSrcId===targetId)return;
+      const cat=row.dataset.cat;
+      const catTasks=tasks.filter(t=>t.cat===cat).sort((a,b)=>(a.order??0)-(b.order??0));
+      const srcIdx=catTasks.findIndex(t=>t.id===dragSrcId);
+      const tgtIdx=catTasks.findIndex(t=>t.id===targetId);
+      if(srcIdx<0||tgtIdx<0)return;
+      const [moved]=catTasks.splice(srcIdx,1);
+      catTasks.splice(tgtIdx,0,moved);
+      catTasks.forEach((t,i)=>{t.order=i;});
+      saveData();render();
+    });
+  });
+}
+
+function toggleGroup(cat){collapsed[cat]=!collapsed[cat];saveData();render();}
+
+let catDragSrc=null;
+
+function bindCatDrag(){
+  document.querySelectorAll('.group').forEach(grp=>{
+    const handle=grp.querySelector('.cat-drag-handle');
+    if(!handle)return;
+    handle.addEventListener('mousedown',()=>{grp.setAttribute('draggable','true');});
+    grp.addEventListener('dragstart',e=>{
+      catDragSrc=grp.dataset.cat;
+      setTimeout(()=>grp.classList.add('cat-dragging'),0);
+      e.dataTransfer.effectAllowed='move';
+      e.stopPropagation();
+    });
+    grp.addEventListener('dragend',()=>{
+      grp.setAttribute('draggable','false');
+      document.querySelectorAll('.group').forEach(g=>g.classList.remove('cat-dragging','cat-drag-over'));
+    });
+    grp.addEventListener('dragover',e=>{
+      if(!catDragSrc||catDragSrc===grp.dataset.cat)return;
+      e.preventDefault();
+      e.stopPropagation();
+      document.querySelectorAll('.group').forEach(g=>g.classList.remove('cat-drag-over'));
+      grp.classList.add('cat-drag-over');
+    });
+    grp.addEventListener('dragleave',()=>grp.classList.remove('cat-drag-over'));
+    grp.addEventListener('drop',e=>{
+      if(!catDragSrc||catDragSrc===grp.dataset.cat)return;
+      e.preventDefault();
+      e.stopPropagation();
+      const srcIdx=catOrder.indexOf(catDragSrc);
+      const tgtIdx=catOrder.indexOf(grp.dataset.cat);
+      if(srcIdx<0||tgtIdx<0)return;
+      catOrder.splice(srcIdx,1);
+      catOrder.splice(tgtIdx,0,catDragSrc);
+      catDragSrc=null;
+      saveData();render();
+    });
+  });
+}
+
+function setFilter(status,prio,cat){filterStatus=status;filterPrio=prio;filterCat=cat||'';render();}
+
+function toggleDone(id){
+  const t=tasks.find(t=>t.id===id);if(!t)return;
+  t.status=t.status==='完了'?'進行中':'完了';
+  saveData();render();
+}
+
+function openAdd(){
+  modal='add';editingId=null;
+  document.getElementById('modal-title').textContent='タスクを追加';
+  document.getElementById('f-title').value='';
+  document.getElementById('f-cat').value=CATS[0];
+  document.getElementById('f-prio').value='中';
+  document.getElementById('f-status').value='進行中';
+  document.getElementById('f-dl').value='';
+  document.getElementById('f-repeat').value='';
+  document.getElementById('f-memo').value='';
+  document.getElementById('modal-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('f-title').focus(),50);
+}
+function openEdit(id){
+  const t=tasks.find(t=>t.id===id);if(!t)return;
+  modal='edit';editingId=id;
+  document.getElementById('modal-title').textContent='タスクを編集';
+  document.getElementById('f-title').value=t.title;
+  document.getElementById('f-cat').value=t.cat;
+  document.getElementById('f-prio').value=t.prio;
+  document.getElementById('f-status').value=t.status;
+  document.getElementById('f-dl').value=t.deadline||'';
+  document.getElementById('f-repeat').value=t.repeat||'';
+  document.getElementById('f-memo').value=t.memo||'';
+  document.getElementById('modal-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('f-title').focus(),50);
+}
+function closeModal(){modal=null;editingId=null;document.getElementById('modal-overlay').classList.remove('show');}
+function overlayClick(e){if(e.target===document.getElementById('modal-overlay'))closeModal();}
+
+function save(){
+  const title=document.getElementById('f-title').value.trim();
+  if(!title)return;
+  const d={title,cat:document.getElementById('f-cat').value,prio:document.getElementById('f-prio').value,deadline:document.getElementById('f-dl').value,status:document.getElementById('f-status').value,repeat:document.getElementById('f-repeat').value,memo:document.getElementById('f-memo').value.trim()};
+  if(modal==='add'){
+    tasks.push({id:nextId++,...d,order:0});
+  }
+  else{const t=tasks.find(t=>t.id===editingId);if(t)Object.assign(t,d);}
+  reorderByDeadline(d.cat);
+  saveData();closeModal();render();
+}
+
+function reorderByDeadline(cat){
+  const catTasks=tasks.filter(t=>t.cat===cat);
+  catTasks.sort((a,b)=>{
+    const ad=a.deadline||'9999-99-99', bd=b.deadline||'9999-99-99';
+    return ad<bd?-1:ad>bd?1:0;
+  });
+  catTasks.forEach((t,i)=>{t.order=i;});
+}
+function exportBackup(){
+  const data={tasks,nextId,catOrder,collapsed,exportedAt:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const dateStr=new Date().toISOString().slice(0,10).replace(/-/g,'');
+  a.href=url;a.download=`tasks_backup_${dateStr}.json`;
+  a.click();URL.revokeObjectURL(url);
+}
+
+function importBackup(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const d=JSON.parse(ev.target.result);
+      if(!d.tasks)throw new Error('invalid');
+      if(!confirm(`バックアップを復元します。現在のデータは上書きされます。\n（タスク数: ${d.tasks.length}件、保存日時: ${d.exportedAt||'不明'}）\n\nよろしいですか？`))return;
+      tasks=d.tasks;
+      nextId=d.nextId||tasks.length+1;
+      if(d.catOrder)catOrder=d.catOrder;
+      if(d.collapsed)collapsed=d.collapsed;
+      tasks.forEach((t,i)=>{if(t.order==null)t.order=i;if(t.status==='未着手')t.status='進行中';});
+      saveData();render();
+      alert('復元が完了しました。');
+    }catch(err){alert('ファイルの読み込みに失敗しました。正しいバックアップファイルか確認してください。');}
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+function del(id){
+  if(confirm('このタスクを削除しますか？')){tasks=tasks.filter(t=>t.id!==id);saveData();render();}
+}
+
+// init cat select
+const catSel=document.getElementById('f-cat');
+CATS.forEach(c=>{const o=document.createElement('option');o.textContent=c;catSel.appendChild(o);});
+
+// keyboard
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+load();advanceRepeating();render();
+loadFromCloud();
+</script>
+</body>
+</html>
