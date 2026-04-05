@@ -180,7 +180,7 @@ body{display:flex;min-height:100vh}
     </label>
     <button class="backup-btn gcal-btn" id="gcal-btn" onclick="syncToGcal()" title="期限日のあるタスクをGoogleカレンダーに同期">
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 2v2M11 2v2M2 7h12"/><path d="M5 10h2v2H5z"/></svg>
-      <span id="gcal-btn-label">Googleカレンダー同期</span>
+      <span id="gcal-btn-label">Google同期</span>
     </button>
     <div class="gcal-status" id="gcal-status"></div>
   </div>
@@ -390,14 +390,12 @@ function render(){
   const isAll=filterStatus===''&&filterPrio===''&&filterCat==='';
   const isWip=filterStatus==='進行中'&&filterPrio===''&&filterCat==='';
   const isDone=filterStatus==='完了'&&filterPrio===''&&filterCat==='';
-  const isHi=filterStatus==='進行中'&&filterPrio==='高'&&filterCat==='';
   const isPriv=filterCat==='プライベート'&&filterStatus===''&&filterPrio==='';
 
   document.getElementById('stats').innerHTML=`
     <div class="stat stat-all${isAll?' active':''}" onclick="setFilter('','','')"><div class="stat-n">${total}</div><div class="stat-l">全タスク</div></div>
     <div class="stat stat-wip${isWip?' active':''}" onclick="setFilter('進行中','','')"><div class="stat-n">${wip}</div><div class="stat-l">進行中</div></div>
     <div class="stat stat-done${isDone?' active':''}" onclick="setFilter('完了','','')"><div class="stat-n">${done}</div><div class="stat-l">完了</div></div>
-    <div class="stat stat-hi${isHi?' active':''}" onclick="setFilter('進行中','高','')"><div class="stat-n">${hi}</div><div class="stat-l">高優先（未完）</div></div>
     <div class="stat stat-priv${isPriv?' active':''}" onclick="setFilter('','','プライベート')"><div class="stat-n">${priv}</div><div class="stat-l">プライベート</div></div>`;
 
   const usedCats=[...new Set(list.map(t=>t.cat))].sort((a,b)=>catOrder.indexOf(a)-catOrder.indexOf(b));
@@ -536,6 +534,7 @@ function toggleDone(id){
 
 function openAdd(){
   modal='add';editingId=null;
+  buildCatSelect();
   document.getElementById('modal-title').textContent='タスクを追加';
   document.getElementById('f-title').value='';
   document.getElementById('f-cat').value=CATS[0];
@@ -550,6 +549,7 @@ function openAdd(){
 function openEdit(id){
   const t=tasks.find(t=>t.id===id);if(!t)return;
   modal='edit';editingId=id;
+  buildCatSelect();
   document.getElementById('modal-title').textContent='タスクを編集';
   document.getElementById('f-title').value=t.title;
   document.getElementById('f-cat').value=t.cat;
@@ -619,9 +619,12 @@ function del(id){
   if(confirm('このタスクを削除しますか？')){tasks=tasks.filter(t=>t.id!==id);saveData();render();}
 }
 
-// init cat select
-const catSel=document.getElementById('f-cat');
-CATS.forEach(c=>{const o=document.createElement('option');o.textContent=c;catSel.appendChild(o);});
+// init cat select — rebuilt dynamically on modal open
+function buildCatSelect(){
+  const sel=document.getElementById('f-cat');
+  sel.innerHTML='';
+  CATS.forEach(c=>{const o=document.createElement('option');o.textContent=c;sel.appendChild(o);});
+}
 
 // keyboard
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
@@ -710,12 +713,12 @@ async function syncToGcal(){
     }
 
     localStorage.setItem(GCAL_ID_KEY,JSON.stringify(storedIds));
-    btn.textContent='Googleカレンダー同期';
+    btn.textContent='Google同期';
     const msg=`追加${added} 更新${updated} 削除${deleted}${skipped?` エラー${skipped}`:''}`;
     setGcalStatus('同期完了: '+msg,'var(--green-600)');
     setTimeout(()=>setGcalStatus(''),5000);
   }catch(e){
-    btn.textContent='Googleカレンダー同期';
+    btn.textContent='Google同期';
     setGcalStatus('エラー: '+e,'var(--coral-600)');
     gcalToken=null;
   }
