@@ -53,6 +53,9 @@ body{display:flex;min-height:100vh}
 .backup-btn{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;margin-top:6px;padding:7px 0;font-size:12px;font-weight:500;border-radius:var(--radius-md);border:1.5px solid var(--border);background:transparent;color:var(--text-2);cursor:pointer;font-family:var(--font);transition:all .15s}
 .backup-btn:hover{background:var(--bg);border-color:var(--border-2);color:var(--text)}
 .restore-btn{color:var(--text-3)}
+.gcal-btn{border-color:var(--blue-100);color:var(--blue-600)}
+.gcal-btn:hover{background:var(--blue-50);border-color:var(--blue-400)}
+.gcal-status{font-size:10px;font-family:var(--mono);margin-top:4px;text-align:center;min-height:14px;color:var(--text-3)}
 
 /* Main content */
 .main{flex:1;min-width:0;padding:1.5rem 1.5rem 4rem}
@@ -154,6 +157,7 @@ body{display:flex;min-height:100vh}
   .main{padding:1rem 0.75rem 3rem}
 }
 </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -174,6 +178,11 @@ body{display:flex;min-height:100vh}
       復元
       <input type="file" accept=".json" onchange="importBackup(event)" style="display:none">
     </label>
+    <button class="backup-btn gcal-btn" id="gcal-btn" onclick="syncToGcal()" title="期限日のあるタスクをGoogleカレンダーに同期">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 2v2M11 2v2M2 7h12"/><path d="M5 10h2v2H5z"/></svg>
+      <span id="gcal-btn-label">Googleカレンダー同期</span>
+    </button>
+    <div class="gcal-status" id="gcal-status"></div>
   </div>
 </aside>
 
@@ -614,6 +623,102 @@ CATS.forEach(c=>{const o=document.createElement('option');o.textContent=c;catSel
 
 // keyboard
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+// ── Google Calendar 同期 ──────────────────────────
+const GCAL_CLIENT_ID='503377575059-qs56i6jolds19soudogiq4p2j5pjeo6c.apps.googleusercontent.com';
+const GCAL_SCOPE='https://www.googleapis.com/auth/calendar.events';
+const GCAL_API='https://www.googleapis.com/calendar/v3/calendars/primary/events';
+const GCAL_ID_KEY='tkm_gcal_ids_v1';
+
+let gcalToken=null;
+
+function setGcalStatus(msg,color){
+  const el=document.getElementById('gcal-status');
+  if(el){el.textContent=msg;el.style.color=color||'var(--text-3)';}
+}
+
+function gcalSignIn(){
+  return new Promise((resolve,reject)=>{
+    const client=google.accounts.oauth2.initTokenClient({
+      client_id:GCAL_CLIENT_ID,
+      scope:GCAL_SCOPE,
+      callback:(resp)=>{
+        if(resp.error){reject(resp.error);return;}
+        gcalToken=resp.access_token;
+        resolve(resp.access_token);
+      }
+    });
+    client.requestAccessToken();
+  });
+}
+
+async function syncToGcal(){
+  const btn=document.getElementById('gcal-btn-label');
+  btn.textContent='認証中…';
+  setGcalStatus('Googleにサインイン中…');
+  try{
+    if(!gcalToken) await gcalSignIn();
+    btn.textContent='同期中…';
+    setGcalStatus('カレンダーに書き込み中…');
+
+    const storedIds=JSON.parse(localStorage.getItem(GCAL_ID_KEY)||'{}');
+    const targets=tasks.filter(t=>t.deadline);
+    let added=0,updated=0,skipped=0;
+
+    for(const t of targets){
+      const summary=`[${t.cat}] ${t.title}`;
+      const desc=`優先度: ${t.prio}${t.memo?'\n'+t.memo:''}${t.repeat?'\n繰り返し: '+(t.repeat==='weekly'?'毎週':'隔週'):''}`;
+      const event={
+        summary,
+        description:desc,
+        start:{date:t.deadline},
+        end:{date:t.deadline},
+        colorId:t.prio==='高'?'11':t.prio==='中'?'5':'2',
+      };
+      const existingId=storedIds[t.id];
+      if(existingId){
+        const r=await fetch(`${GCAL_API}/${existingId}`,{
+          method:'PUT',
+          headers:{'Authorization':'Bearer '+gcalToken,'Content-Type':'application/json'},
+          body:JSON.stringify(event)
+        });
+        if(r.ok){updated++;}
+        else if(r.status===404){
+          const r2=await fetch(GCAL_API,{method:'POST',headers:{'Authorization':'Bearer '+gcalToken,'Content-Type':'application/json'},body:JSON.stringify(event)});
+          if(r2.ok){const d=await r2.json();storedIds[t.id]=d.id;added++;}
+        }
+      } else {
+        const r=await fetch(GCAL_API,{
+          method:'POST',
+          headers:{'Authorization':'Bearer '+gcalToken,'Content-Type':'application/json'},
+          body:JSON.stringify(event)
+        });
+        if(r.ok){const d=await r.json();storedIds[t.id]=d.id;added++;}
+        else skipped++;
+      }
+    }
+
+    // 完了タスクのイベントを削除
+    const completedIds=tasks.filter(t=>t.status==='完了'&&storedIds[t.id]).map(t=>t.id);
+    let deleted=0;
+    for(const id of completedIds){
+      const evId=storedIds[id];
+      const r=await fetch(`${GCAL_API}/${evId}`,{method:'DELETE',headers:{'Authorization':'Bearer '+gcalToken}});
+      if(r.ok||r.status===410){delete storedIds[id];deleted++;}
+    }
+
+    localStorage.setItem(GCAL_ID_KEY,JSON.stringify(storedIds));
+    btn.textContent='Googleカレンダー同期';
+    const msg=`追加${added} 更新${updated} 削除${deleted}${skipped?` エラー${skipped}`:''}`;
+    setGcalStatus('同期完了: '+msg,'var(--green-600)');
+    setTimeout(()=>setGcalStatus(''),5000);
+  }catch(e){
+    btn.textContent='Googleカレンダー同期';
+    setGcalStatus('エラー: '+e,'var(--coral-600)');
+    gcalToken=null;
+  }
+}
+// ─────────────────────────────────────────────────
 
 load();advanceRepeating();render();
 loadFromCloud();
