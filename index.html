@@ -110,6 +110,7 @@ body{display:flex;min-height:100vh}
 .task-row.row-mid:hover{background:var(--bg)}
 .task-row.row-low:hover{background:#ECECEA}
 .repeat-badge{font-size:11px;color:var(--purple-600);font-family:var(--mono);flex-shrink:0;white-space:nowrap}
+.dirty-badge{font-size:9px;color:var(--amber-600);flex-shrink:0;line-height:1}
 .dl-txt{font-size:11px;color:var(--text-3);flex-shrink:0;min-width:74px;text-align:right;font-family:var(--mono)}
 .dl-over{color:var(--coral-600);font-weight:700}
 .act-btn{width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);border:none;background:transparent;color:var(--text-3);cursor:pointer;transition:all .15s;flex-shrink:0}
@@ -199,6 +200,10 @@ body{display:flex;min-height:100vh}
       <span id="gcal-btn-label">Google同期</span>
     </button>
     <div class="gcal-status" id="gcal-status"></div>
+    <button class="backup-btn" onclick="clearCache()" title="キャッシュをクリアして最新版を読み込む">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2v4H9"/><path d="M3 14v-4h4"/><path d="M13 6A6 6 0 1 0 10 13"/></svg>
+      キャッシュクリア
+    </button>
   </div>
 </aside>
 
@@ -216,6 +221,10 @@ body{display:flex;min-height:100vh}
     <button class="backup-btn gcal-btn" onclick="syncToGcal()">
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 2v2M11 2v2M2 7h12"/><path d="M5 10h2v2H5z"/></svg>
       Google同期
+    </button>
+    <button class="backup-btn" onclick="clearCache()">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2v4H9"/><path d="M3 14v-4h4"/><path d="M13 6A6 6 0 1 0 10 13"/></svg>
+      キャッシュクリア
     </button>
     <div class="gcal-status" id="gcal-status-mobile"></div>
   </div>
@@ -328,11 +337,26 @@ async function loadFromCloud(){
     let cloud;
     try{cloud=JSON.parse(text);}catch(e){return setSyncStatus('err','データ形式エラー');}
     if(!cloud.tasks)return setSyncStatus('ok','クラウド: データなし');
+
+    const dirtyTasks=tasks.filter(t=>t.dirty);
+
+    if(dirtyTasks.length>0){
+      const names=dirtyTasks.map(t=>'・'+t.title).join('\n');
+      const msg=`オフライン中に追加・編集されたタスクが${dirtyTasks.length}件あります：\n\n${names}\n\nどちらのデータを使いますか？\n\n【OK】ローカルの変更を優先してクラウドに上書き保存\n【キャンセル】クラウドのデータを使う（ローカルの変更は破棄）`;
+      if(confirm(msg)){
+        tasks.forEach(t=>delete t.dirty);
+        saveData();
+        setSyncStatus('ok','ローカルの変更をクラウドに保存しました');
+        advanceRepeating();render();
+        return;
+      }
+    }
+
+    const catMap={'社史・周年史':'仕事','座談会・インタビュー':'仕事','文字起こし・校正':'仕事','書籍・創作':'仕事','講師業':'講師'};
     tasks=cloud.tasks;
     nextId=cloud.nextId||tasks.length+1;
     if(cloud.catOrder)catOrder=cloud.catOrder;
     if(cloud.collapsed)collapsed=cloud.collapsed;
-    const catMap={'社史・周年史':'仕事','座談会・インタビュー':'仕事','文字起こし・校正':'仕事','書籍・創作':'仕事','講師業':'講師'};
     tasks.forEach((t,i)=>{if(t.order==null)t.order=i;if(t.status==='未着手')t.status='進行中';if(catMap[t.cat])t.cat=catMap[t.cat];});
     try{
       localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:cloud.updatedAt||Date.now()}));
@@ -351,6 +375,8 @@ async function pushToCloudNow(){
   try{
     const res=await fetch(GAS_URL,{method:'POST',body:payload,redirect:'follow'});
     await res.text();
+    tasks.forEach(t=>delete t.dirty);
+    localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:Date.now()}));
     setSyncStatus('ok','クラウド同期済み');
   }catch(e){
     setSyncStatus('err','同期エラー');
@@ -442,6 +468,7 @@ function render(){
         </div>
         <span class="badge ${pc} col-cat-badge">${t.prio}</span>
         ${repeatLabel?`<span class="repeat-badge">${repeatLabel}</span>`:''}
+        ${t.dirty?`<span class="dirty-badge" title="未同期">●</span>`:''}
         <span class="dl-txt${over?' dl-over':''}">${t.deadline||'—'}</span>
         <button class="act-btn" onclick="openEdit(${t.id})" title="編集"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z"/></svg></button>
         <button class="act-btn del-btn" onclick="del(${t.id})" title="削除"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,5 13,5"/><path d="M6 5V3h4v2"/><path d="M4 5l1 8h6l1-8"/></svg></button>
@@ -620,7 +647,7 @@ function overlayClick(e){if(e.target===document.getElementById('modal-overlay'))
 function save(){
   const title=document.getElementById('f-title').value.trim();
   if(!title)return;
-  const d={title,cat:document.getElementById('f-cat').value,prio:document.getElementById('f-prio').value,deadline:document.getElementById('f-dl').value,status:document.getElementById('f-status').value,repeat:document.getElementById('f-repeat').value,memo:document.getElementById('f-memo').value.trim()};
+  const d={title,cat:document.getElementById('f-cat').value,prio:document.getElementById('f-prio').value,deadline:document.getElementById('f-dl').value,status:document.getElementById('f-status').value,repeat:document.getElementById('f-repeat').value,memo:document.getElementById('f-memo').value.trim(),dirty:true};
   if(modal==='add'){
     tasks.push({id:nextId++,...d,order:0});
   }
@@ -666,6 +693,21 @@ function importBackup(e){
   };
   reader.readAsText(file);
   e.target.value='';
+}
+
+function clearCache(){
+  if(!confirm('キャッシュをクリアして最新版を読み込みます。\nタスクデータはクラウドから復元されます。'))return;
+  try{
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(COLLAPSED_KEY);
+    localStorage.removeItem(CATORDER_KEY);
+  }catch(e){}
+  if('caches' in window){
+    caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k))))
+      .then(()=>location.reload(true));
+  } else {
+    location.reload(true);
+  }
 }
 
 function del(id){
