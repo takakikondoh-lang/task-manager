@@ -135,6 +135,7 @@ body{display:flex;min-height:100vh}
 .field input,.field select,.field textarea{width:100%;font-size:13px;padding:7px 10px;border-radius:var(--radius-md);border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);outline:none;transition:border-color .15s}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--purple-400)}
 .field textarea{height:56px;resize:vertical}
+.float-add-btn{display:none}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .mbtns{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
 .mbtns button{height:34px;padding:0 16px;font-size:13px;border-radius:var(--radius-md);border:1.5px solid var(--border);cursor:pointer;background:transparent;color:var(--text);font-family:var(--font);font-weight:500;transition:all .15s}
@@ -162,7 +163,10 @@ body{display:flex;min-height:100vh}
   #gcal-status{display:none}
   .dl-txt{display:none}
   .col-cat-badge{display:none}
-  .main{padding:0.75rem 0.75rem 2rem}
+  .main{padding:0.75rem 0.75rem 5rem}
+  .field input,.field select,.field textarea{font-size:16px}
+  .float-add-btn{display:flex;align-items:center;justify-content:center;gap:6px;position:fixed;bottom:1.5rem;right:1.5rem;width:52px;height:52px;background:var(--purple-600);color:#fff;border:none;border-radius:50%;font-size:26px;line-height:1;cursor:pointer;z-index:50;box-shadow:0 4px 16px rgba(83,74,183,.45)}
+  .float-add-btn:active{background:var(--purple-800);transform:scale(0.95)}
 }
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -215,6 +219,7 @@ body{display:flex;min-height:100vh}
     </button>
     <div class="gcal-status" id="gcal-status-mobile"></div>
   </div>
+  <button class="float-add-btn" onclick="openAdd()" title="タスク追加">＋</button>
 </main>
 
 <!-- Modal -->
@@ -463,6 +468,7 @@ let dragSrcId=null;
 
 function bindDrag(){
   document.querySelectorAll('.task-row[draggable]').forEach(row=>{
+    // Mouse drag (desktop)
     row.addEventListener('dragstart',e=>{
       dragSrcId=parseInt(row.dataset.id);
       setTimeout(()=>row.classList.add('dragging'),0);
@@ -483,6 +489,40 @@ function bindDrag(){
       const targetId=parseInt(row.dataset.id);
       if(dragSrcId===targetId)return;
       const cat=row.dataset.cat;
+      const catTasks=tasks.filter(t=>t.cat===cat).sort((a,b)=>(a.order??0)-(b.order??0));
+      const srcIdx=catTasks.findIndex(t=>t.id===dragSrcId);
+      const tgtIdx=catTasks.findIndex(t=>t.id===targetId);
+      if(srcIdx<0||tgtIdx<0)return;
+      const [moved]=catTasks.splice(srcIdx,1);
+      catTasks.splice(tgtIdx,0,moved);
+      catTasks.forEach((t,i)=>{t.order=i;});
+      saveData();render();
+    });
+
+    // Touch drag (iOS)
+    const handle=row.querySelector('.drag-handle');
+    if(!handle)return;
+    handle.addEventListener('touchstart',e=>{
+      e.stopPropagation();
+      dragSrcId=parseInt(row.dataset.id);
+      row.classList.add('dragging');
+    },{passive:true});
+    handle.addEventListener('touchmove',e=>{
+      e.preventDefault();
+      const touch=e.touches[0];
+      const el=document.elementFromPoint(touch.clientX,touch.clientY);
+      const targetRow=el?.closest('.task-row');
+      document.querySelectorAll('.task-row').forEach(r=>r.classList.remove('drag-over'));
+      if(targetRow&&targetRow!==row) targetRow.classList.add('drag-over');
+    },{passive:false});
+    handle.addEventListener('touchend',e=>{
+      e.stopPropagation();
+      const overRow=document.querySelector('.task-row.drag-over');
+      document.querySelectorAll('.task-row').forEach(r=>r.classList.remove('dragging','drag-over'));
+      if(!overRow||!dragSrcId)return;
+      const targetId=parseInt(overRow.dataset.id);
+      if(dragSrcId===targetId)return;
+      const cat=overRow.dataset.cat;
       const catTasks=tasks.filter(t=>t.cat===cat).sort((a,b)=>(a.order??0)-(b.order??0));
       const srcIdx=catTasks.findIndex(t=>t.id===dragSrcId);
       const tgtIdx=catTasks.findIndex(t=>t.id===targetId);
