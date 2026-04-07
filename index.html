@@ -284,7 +284,7 @@ const SECRET_TOKEN='tkm-2026-kondoh';
 let tasks=[];
 let nextId=1;
 let modal=null,editingId=null;
-let search='',filterStatus='',filterPrio='',filterCat='';
+let search='',filterStatus='進行中',filterPrio='',filterCat='';
 let collapsed={};
 let catOrder=[...CATS];
 
@@ -437,10 +437,10 @@ function render(){
   const isPriv=filterCat==='プライベート'&&filterStatus===''&&filterPrio==='';
 
   document.getElementById('stats').innerHTML=`
-    <div class="stat stat-all${isAll?' active':''}" onclick="setFilter('','','')"><div class="stat-n">${total}</div><div class="stat-l">全タスク</div></div>
     <div class="stat stat-wip${isWip?' active':''}" onclick="setFilter('進行中','','')"><div class="stat-n">${wip}</div><div class="stat-l">進行中</div></div>
     <div class="stat stat-done${isDone?' active':''}" onclick="setFilter('完了','','')"><div class="stat-n">${done}</div><div class="stat-l">完了</div></div>
-    <div class="stat stat-priv${isPriv?' active':''}" onclick="setFilter('','','プライベート')"><div class="stat-n">${priv}</div><div class="stat-l">プライベート</div></div>`;
+    <div class="stat stat-priv${isPriv?' active':''}" onclick="setFilter('','','プライベート')"><div class="stat-n">${priv}</div><div class="stat-l">プライベート</div></div>
+    <div class="stat stat-all${isAll?' active':''}" onclick="setFilter('','','')"><div class="stat-n">${total}</div><div class="stat-l">全タスク</div></div>`;
 
   const usedCats=[...new Set(list.map(t=>t.cat))].sort((a,b)=>catOrder.indexOf(a)-catOrder.indexOf(b));
   const el=document.getElementById('groups');
