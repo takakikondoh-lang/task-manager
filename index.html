@@ -323,25 +323,18 @@ async function loadFromCloud(){
     let cloud;
     try{cloud=JSON.parse(text);}catch(e){return setSyncStatus('err','データ形式エラー');}
     if(!cloud.tasks)return setSyncStatus('ok','クラウド: データなし');
-    const localRaw=localStorage.getItem(STORAGE_KEY);
-    const localUpdated=localRaw?JSON.parse(localRaw).updatedAt||0:0;
-    const cloudUpdated=cloud.updatedAt||0;
-    if(cloudUpdated>localUpdated){
-      tasks=cloud.tasks;
-      nextId=cloud.nextId||tasks.length+1;
-      if(cloud.catOrder)catOrder=cloud.catOrder;
-      if(cloud.collapsed)collapsed=cloud.collapsed;
-      const catMap={'社史・周年史':'仕事','座談会・インタビュー':'仕事','文字起こし・校正':'仕事','書籍・創作':'仕事','講師業':'講師'};
-      tasks.forEach((t,i)=>{if(t.order==null)t.order=i;if(t.status==='未着手')t.status='進行中';if(catMap[t.cat])t.cat=catMap[t.cat];});
-      try{
-        localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:cloudUpdated}));
-        localStorage.setItem(COLLAPSED_KEY,JSON.stringify(collapsed));
-        localStorage.setItem(CATORDER_KEY,JSON.stringify(catOrder));
-      }catch(e){}
-      setSyncStatus('ok','クラウドから読み込み済み');
-    } else {
-      setSyncStatus('ok','ローカルが最新');
-    }
+    tasks=cloud.tasks;
+    nextId=cloud.nextId||tasks.length+1;
+    if(cloud.catOrder)catOrder=cloud.catOrder;
+    if(cloud.collapsed)collapsed=cloud.collapsed;
+    const catMap={'社史・周年史':'仕事','座談会・インタビュー':'仕事','文字起こし・校正':'仕事','書籍・創作':'仕事','講師業':'講師'};
+    tasks.forEach((t,i)=>{if(t.order==null)t.order=i;if(t.status==='未着手')t.status='進行中';if(catMap[t.cat])t.cat=catMap[t.cat];});
+    try{
+      localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:cloud.updatedAt||Date.now()}));
+      localStorage.setItem(COLLAPSED_KEY,JSON.stringify(collapsed));
+      localStorage.setItem(CATORDER_KEY,JSON.stringify(catOrder));
+    }catch(e){}
+    setSyncStatus('ok','クラウドから読み込み済み');
     advanceRepeating();render();
   }catch(e){
     setSyncStatus('err','接続エラー');
