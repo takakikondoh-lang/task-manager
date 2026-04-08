@@ -157,13 +157,16 @@ body{display:flex;min-height:100vh}
   .sidebar-app{margin-bottom:0.6rem}
   .sidebar-app-text{font-size:16px;flex:1}
   .sidebar-app-add{display:none!important}
-  .mobile-prio-select{display:block;font-size:13px;padding:4px 8px;border-radius:var(--radius-md);border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);height:30px;margin-left:8px;flex-shrink:0}
+  .mobile-prio-select{display:none}
   .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:0}
   .stat{padding:7px 10px}
   .stat-n{font-size:17px}
   .stat-l{font-size:10px}
   .sidebar-add{display:none}
   .toolbar{display:none}
+  .stats{display:none}
+  .mobile-hide{display:none!important}
+  .mobile-tap-edit{cursor:pointer}
   .mobile-gcal{display:block;padding:0.75rem 0.75rem 0}
   #gcal-status{display:none}
   .dl-txt{display:none}
@@ -484,15 +487,15 @@ function render(){
       return `<div class="task-row ${rowBg}" draggable="true" data-id="${t.id}" data-cat="${cat}">
         <div class="drag-handle" title="ドラッグで並べ替え"><span></span><span></span><span></span></div>
         <div class="t-check ${chkCls}" onclick="toggleDone(${t.id})" title="クリックで完了/進行中を切替"></div>
-        <div class="t-title${isDone?' is-done':''}">
+        <div class="t-title${isDone?' is-done':''} mobile-tap-edit" onclick="handleTaskTap(event,${t.id})">
           ${t.title}${t.memo?`<div class="t-memo">${t.memo}</div>`:''}
         </div>
         <span class="badge ${pc} col-cat-badge">${t.prio}</span>
         ${repeatLabel?`<span class="repeat-badge">${repeatLabel}</span>`:''}
         ${t.dirty?`<span class="dirty-badge" title="未同期">●</span>`:''}
-        <span class="dl-txt${over?' dl-over':''}">${t.deadline||'—'}</span>
-        <button class="act-btn" onclick="openEdit(${t.id})" title="編集"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z"/></svg></button>
-        <button class="act-btn del-btn" onclick="del(${t.id})" title="削除"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,5 13,5"/><path d="M6 5V3h4v2"/><path d="M4 5l1 8h6l1-8"/></svg></button>
+        <span class="dl-txt${over?' dl-over':''} mobile-tap-edit" onclick="handleTaskTap(event,${t.id})">${t.deadline||'—'}</span>
+        <button class="act-btn mobile-hide" onclick="openEdit(${t.id})" title="編集"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z"/></svg></button>
+        <button class="act-btn del-btn mobile-hide" onclick="del(${t.id})" title="削除"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,5 13,5"/><path d="M6 5V3h4v2"/><path d="M4 5l1 8h6l1-8"/></svg></button>
       </div>`;
     }).join(''):'';
 
@@ -626,6 +629,10 @@ function bindCatDrag(){
 }
 
 function setFilter(status,prio,cat){filterStatus=status;filterPrio=prio;filterCat=cat||'';render();}
+
+function handleTaskTap(e,id){
+  if(window.innerWidth<=640) openEdit(id);
+}
 
 function toggleDone(id){
   const t=tasks.find(t=>t.id===id);if(!t)return;
