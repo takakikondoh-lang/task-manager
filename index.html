@@ -169,7 +169,8 @@ body{display:flex;min-height:100vh}
   .mobile-tap-edit{cursor:pointer}
   .mobile-gcal{display:block;padding:0.75rem 0.75rem 0}
   #gcal-status{display:none}
-  .dl-txt{display:none}
+  .dl-txt{display:block!important;min-width:auto;font-size:11px}
+  .dl-txt::before{content:'〜'}
   .col-cat-badge{display:none}
   .main{padding:0.75rem 0.75rem 5rem}
   .field input,.field select,.field textarea{font-size:16px}
@@ -483,6 +484,7 @@ function render(){
       const rowBg=isDone?'row-done':t.prio==='高'?'row-high':t.prio==='中'?'row-mid':'row-low';
       const chkCls=isDone?'done':'wip';
       const over=isOver(t.deadline,t.status);
+      const dlDisplay=t.deadline?t.deadline.slice(5).replace('-','/'):'—';
       const repeatLabel=t.repeat==='weekly'?'↻毎週':t.repeat==='biweekly'?'↻隔週':'';
       return `<div class="task-row ${rowBg}" draggable="true" data-id="${t.id}" data-cat="${cat}">
         <div class="drag-handle" title="ドラッグで並べ替え"><span></span><span></span><span></span></div>
@@ -493,7 +495,7 @@ function render(){
         <span class="badge ${pc} col-cat-badge">${t.prio}</span>
         ${repeatLabel?`<span class="repeat-badge">${repeatLabel}</span>`:''}
         ${t.dirty?`<span class="dirty-badge" title="未同期">●</span>`:''}
-        <span class="dl-txt${over?' dl-over':''} mobile-tap-edit" onclick="handleTaskTap(event,${t.id})">${t.deadline||'—'}</span>
+        <span class="dl-txt${over?' dl-over':''} mobile-tap-edit" onclick="handleTaskTap(event,${t.id})">${dlDisplay}</span>
         <button class="act-btn mobile-hide" onclick="openEdit(${t.id})" title="編集"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z"/></svg></button>
         <button class="act-btn del-btn mobile-hide" onclick="del(${t.id})" title="削除"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,5 13,5"/><path d="M6 5V3h4v2"/><path d="M4 5l1 8h6l1-8"/></svg></button>
       </div>`;
@@ -634,10 +636,24 @@ function handleTaskTap(e,id){
   if(window.innerWidth<=640) openEdit(id);
 }
 
+const pendingDone={};
+
 function toggleDone(id){
   const t=tasks.find(t=>t.id===id);if(!t)return;
-  t.status=t.status==='完了'?'進行中':'完了';
-  saveData();render();
+  if(t.status==='完了'){
+    t.status='進行中';
+    if(pendingDone[id]){clearTimeout(pendingDone[id]);delete pendingDone[id];}
+    saveData();render();
+  } else {
+    if(pendingDone[id])return;
+    const row=document.querySelector(`.task-row[data-id="${id}"] .t-check`);
+    if(row)row.style.background='#a5d6a7';
+    pendingDone[id]=setTimeout(()=>{
+      delete pendingDone[id];
+      const t2=tasks.find(t=>t.id===id);
+      if(t2&&t2.status!=='完了'){t2.status='完了';saveData();render();}
+    },1000);
+  }
 }
 
 function openAdd(){
