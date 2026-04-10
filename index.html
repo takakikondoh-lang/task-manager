@@ -106,13 +106,16 @@ body{display:flex;min-height:100vh}
 .row-mid{background:var(--surface)}
 .row-low{background:#F5F5F3}
 .row-done{background:var(--surface);opacity:.5}
+.row-imminent{background:#FECACA}
 .task-row.row-high:hover{background:#FDE8E8}
 .task-row.row-mid:hover{background:var(--bg)}
 .task-row.row-low:hover{background:#ECECEA}
+.task-row.row-imminent:hover{background:#FCA5A5}
 .repeat-badge{font-size:11px;color:var(--purple-600);font-family:var(--mono);flex-shrink:0;white-space:nowrap}
 .dirty-badge{font-size:9px;color:var(--amber-600);flex-shrink:0;line-height:1}
 .dl-txt{font-size:11px;color:var(--text-3);flex-shrink:0;min-width:74px;text-align:right;font-family:var(--mono)}
 .dl-over{color:var(--coral-600);font-weight:700}
+.dl-week-near{color:var(--coral-600);font-weight:700}
 .act-btn{width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius-sm);border:none;background:transparent;color:var(--text-3);cursor:pointer;transition:all .15s;flex-shrink:0}
 .act-btn:hover{background:var(--bg);color:var(--text-2)}
 .del-btn:hover{background:var(--coral-50);color:var(--coral-600)}
@@ -547,6 +550,16 @@ function defaultTasks(){
 
 function today(){return new Date().toISOString().slice(0,10);}
 function isOver(d,st){return d&&d<today()&&st==='進行中';}
+function isWeekNear(d,st){
+  if(!d||st!=='進行中')return false;
+  const diff=(new Date(d+'T00:00:00')-new Date(today()+'T00:00:00'))/(1000*60*60*24);
+  return diff>=0&&diff<7;
+}
+function isImminent(d,st){
+  if(!d||st!=='進行中')return false;
+  const diff=(new Date(d+'T00:00:00')-new Date(today()+'T00:00:00'))/(1000*60*60*24);
+  return diff>=0&&diff<1;
+}
 function catColor(cat){return CAT_COLORS[CATS.indexOf(cat)%CAT_COLORS.length]||CAT_COLORS[0];}
 function catInitial(cat){const m={'仕事':'仕','講師':'講','プライベート':'私','その他':'他'};return m[cat]||cat[0];}
 
@@ -606,9 +619,11 @@ function render(){
     const rows=isOpen?items.map(t=>{
       const pc=t.prio==='高'?'p-high':t.prio==='中'?'p-mid':'p-low';
       const isDone=t.status==='完了';
-      const rowBg=isDone?'row-done':t.prio==='高'?'row-high':t.prio==='中'?'row-mid':'row-low';
-      const chkCls=isDone?'done':'wip';
       const over=isOver(t.deadline,t.status);
+      const imminent=isImminent(t.deadline,t.status);
+      const weekNear=isWeekNear(t.deadline,t.status);
+      const rowBg=isDone?'row-done':imminent?'row-imminent':t.prio==='高'?'row-high':t.prio==='中'?'row-mid':'row-low';
+      const chkCls=isDone?'done':'wip';
       const dlDisplay=t.deadline?t.deadline.slice(5).replace('-','/'):'—';
       const repeatLabel=t.repeat==='weekly'?'↻毎週':t.repeat==='biweekly'?'↻隔週':'';
       return `<div class="task-row ${rowBg}" draggable="true" data-id="${t.id}" data-cat="${cat}">
@@ -620,7 +635,7 @@ function render(){
         <span class="badge ${pc} col-cat-badge">${t.prio}</span>
         ${repeatLabel?`<span class="repeat-badge">${repeatLabel}</span>`:''}
         ${t.dirty?`<span class="dirty-badge" title="未同期">●</span>`:''}
-        <span class="dl-txt${over?' dl-over':''} mobile-tap-edit" onclick="handleTaskTap(event,${t.id})">${dlDisplay}</span>
+        <span class="dl-txt${over?' dl-over':weekNear?' dl-week-near':''} mobile-tap-edit" onclick="handleTaskTap(event,${t.id})">${dlDisplay}</span>
         <button class="act-btn mobile-hide" onclick="openEdit(${t.id})" title="編集"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z"/></svg></button>
         <button class="act-btn del-btn mobile-hide" onclick="del(${t.id})" title="削除"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,5 13,5"/><path d="M6 5V3h4v2"/><path d="M4 5l1 8h6l1-8"/></svg></button>
       </div>`;
