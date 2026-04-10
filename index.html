@@ -306,8 +306,7 @@ const PRIOS=['高','中','低'];
 const STORAGE_KEY='tkm_tasks_v1';
 const COLLAPSED_KEY='tkm_collapsed_v1';
 const CATORDER_KEY='tkm_catorder_v1';
-const GAS_URL='https://script.google.com/macros/s/AKfycbxCB9y2xN8l3aM2V663tyyRP0DlcMzFCc5X-VscIXHILtczSyuPdRrEr_rX8u7aNys6eQ/exec';
-
+const GAS_URL='https://script.google.com/macros/s/AKfycbxFy7_9z8Mdgd_uR4VKdqPHvCx7czYhoNfzJf8234XDEYua0v5gaEbwRcu0mB5af7QVzQ/exec';
 const SECRET_TOKEN='tkm-2026-kondoh';
 const DEVICE_KEY='tkm_device_id';
 
@@ -373,7 +372,7 @@ function setSyncStatus(type,msg){
 async function loadFromCloud(){
   setSyncStatus('ing','クラウド確認中…');
   try{
-    const res=await fetch(GAS_URL+'?t='+Date.now()+'&token='+SECRET_TOKEN);
+    const res=await fetch(GAS_URL+'?t='+Date.now()+'&token='+SECRET_TOKEN,{redirect:'follow'});
     const text=await res.text();
     if(!text||text==='{}')return setSyncStatus('ok','クラウド: データなし');
     let cloud;
@@ -456,7 +455,7 @@ function _fmtTime(ts){
 async function pushToCloudNow(){
   // push前にクラウドのversionを確認（古い状態で上書きしない）
   try{
-    const chk=await fetch(GAS_URL+'?t='+Date.now()+'&token='+SECRET_TOKEN+'&checkonly=1');
+    const chk=await fetch(GAS_URL+'?t='+Date.now()+'&token='+SECRET_TOKEN+'&checkonly=1',{redirect:'follow'});
     const chkText=await chk.text();
     if(chkText&&chkText!=='{}'){
       let chkData;
@@ -484,9 +483,9 @@ async function pushToCloudNow(){
     }
   }catch(e){/* チェック失敗はそのまま続行 */}
 
-  const payload=JSON.stringify({tasks,nextId,catOrder,collapsed,updatedAt:Date.now(),version:dataVersion,updatedBy:DEVICE_ID,token:SECRET_TOKEN,origin:location.origin});
+  const payload=JSON.stringify({tasks,nextId,catOrder,collapsed,updatedAt:Date.now(),version:dataVersion,updatedBy:DEVICE_ID,token:SECRET_TOKEN});
   try{
-    const res=await fetch(GAS_URL,{method:'POST',body:payload});
+    const res=await fetch(GAS_URL,{method:'POST',body:payload,redirect:'follow'});
     await res.text();
     tasks.forEach(t=>delete t.dirty);
     localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:Date.now(),version:dataVersion,updatedBy:DEVICE_ID}));
