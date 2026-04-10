@@ -177,6 +177,7 @@ body{display:flex;min-height:100vh}
   .col-cat-badge{display:none}
   .main{padding:0.75rem 0.75rem 5rem}
   .field input,.field select,.field textarea{font-size:16px}
+  .field input[type=date]{width:100%;box-sizing:border-box}
   .float-add-btn{display:flex;align-items:center;justify-content:center;position:fixed;bottom:1.5rem;right:1.5rem;width:52px;height:52px;background:var(--purple-600);color:#fff;border:none;border-radius:50%;font-size:26px;line-height:1;cursor:pointer;z-index:50;box-shadow:0 4px 16px rgba(83,74,183,.45)}
   .float-add-btn:active{background:var(--purple-800);transform:scale(0.95)}
   .float-search-btn{display:flex;align-items:center;justify-content:center;position:fixed;bottom:1.5rem;right:5.5rem;width:52px;height:52px;background:var(--surface);color:var(--text-2);border:1.5px solid var(--border-2);border-radius:50%;cursor:pointer;z-index:50;box-shadow:0 4px 12px rgba(0,0,0,.12)}
@@ -203,6 +204,7 @@ body{display:flex;min-height:100vh}
 .quick-add-btns button{height:44px;font-size:14px;font-weight:500;border-radius:var(--radius-md);border:1.5px solid var(--border);background:transparent;color:var(--text);font-family:var(--font);cursor:pointer}
 .quick-add-btns .qa-ok{background:var(--purple-600);color:#fff;border-color:var(--purple-600)}
 .quick-add-btns .qa-detail{background:var(--bg);color:var(--purple-600);border-color:var(--purple-200)}
+.quick-add-sheet.keyboard-up{transform:translateY(0);bottom:var(--qa-keyboard-offset,0px)}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -807,12 +809,28 @@ function openQuickAdd(){
   // シートを開く
   document.getElementById('quick-add-overlay').classList.add('open');
   document.getElementById('quick-add-sheet').classList.add('open');
+  // visualViewportでキーボード対応
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize',_qaViewportHandler);
+  }
   setTimeout(()=>document.getElementById('qa-title').focus(),300);
+}
+
+function _qaViewportHandler(){
+  const sheet=document.getElementById('quick-add-sheet');
+  if(!sheet)return;
+  const offset=window.innerHeight-window.visualViewport.height;
+  sheet.style.bottom=offset+'px';
 }
 
 function closeQuickAdd(){
   document.getElementById('quick-add-overlay').classList.remove('open');
-  document.getElementById('quick-add-sheet').classList.remove('open');
+  const sheet=document.getElementById('quick-add-sheet');
+  sheet.classList.remove('open');
+  sheet.style.bottom='';
+  if(window.visualViewport){
+    window.visualViewport.removeEventListener('resize',_qaViewportHandler);
+  }
 }
 
 function quickAddSave(){
