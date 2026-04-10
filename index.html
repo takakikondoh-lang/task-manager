@@ -483,7 +483,7 @@ async function pushToCloudNow(){
     }
   }catch(e){/* チェック失敗はそのまま続行 */}
 
-  const payload=JSON.stringify({tasks,nextId,catOrder,collapsed,updatedAt:Date.now(),version:dataVersion,updatedBy:DEVICE_ID,token:SECRET_TOKEN});
+  const payload=JSON.stringify({tasks,nextId,catOrder,collapsed,updatedAt:Date.now(),version:dataVersion,updatedBy:DEVICE_ID,token:SECRET_TOKEN,origin:location.origin});
   try{
     const res=await fetch(GAS_URL,{method:'POST',body:payload,redirect:'follow'});
     await res.text();
