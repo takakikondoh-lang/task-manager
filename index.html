@@ -183,19 +183,23 @@ body{display:flex;min-height:100vh}
   .mobile-search-overlay input{flex:1;font-size:16px;padding:8px 12px;border-radius:var(--radius-md);border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);outline:none}
   .mobile-search-overlay input:focus{border-color:var(--purple-400)}
   .mobile-search-overlay button{width:36px;height:36px;border:none;background:transparent;font-size:18px;color:var(--text-2);cursor:pointer;flex-shrink:0}
-  /* クイック追加シート */
-  .quick-add-sheet{position:fixed;bottom:0;left:0;right:0;z-index:150;background:var(--surface);border-top:1.5px solid var(--border);border-radius:20px 20px 0 0;padding:1.25rem 1rem 2rem;box-shadow:0 -4px 24px rgba(0,0,0,.12);transform:translateY(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
-  .quick-add-sheet.open{transform:translateY(0)}
-  .quick-add-handle{width:36px;height:4px;background:var(--border-2);border-radius:2px;margin:0 auto 1.25rem}
-  .quick-add-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:1rem}
-  .quick-add-sheet .field input,.quick-add-sheet .field select{font-size:16px}
-  .quick-add-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:1.25rem}
-  .quick-add-btns button{height:44px;font-size:14px;font-weight:500;border-radius:var(--radius-md);border:1.5px solid var(--border);background:transparent;color:var(--text);font-family:var(--font);cursor:pointer}
-  .quick-add-btns .qa-ok{background:var(--purple-600);color:#fff;border-color:var(--purple-600)}
-  .quick-add-btns .qa-detail{background:var(--bg);color:var(--purple-600);border-color:var(--purple-200)}
-  .quick-add-overlay{position:fixed;inset:0;z-index:140;background:rgba(0,0,0,.3);display:none}
-  .quick-add-overlay.open{display:block}
 }
+
+/* クイック追加シート（モバイル専用、グローバルに定義） */
+.quick-add-overlay{display:none;position:fixed;inset:0;z-index:140;background:rgba(0,0,0,.3)}
+.quick-add-overlay.open{display:block}
+.quick-add-sheet{position:fixed;bottom:0;left:0;right:0;z-index:150;background:var(--surface);border-top:1.5px solid var(--border);border-radius:20px 20px 0 0;padding:1.25rem 1rem 2rem;box-shadow:0 -4px 24px rgba(0,0,0,.12);transform:translateY(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);display:none}
+.quick-add-sheet.open{transform:translateY(0);display:block}
+.quick-add-handle{width:36px;height:4px;background:var(--border-2);border-radius:2px;margin:0 auto 1.25rem}
+.quick-add-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:1rem}
+.qa-field{margin-bottom:12px}
+.qa-label{display:block;font-size:11px;font-weight:700;color:var(--text-2);margin-bottom:4px;letter-spacing:.05em;text-transform:uppercase}
+.qa-input{width:100%;font-size:16px;padding:10px 12px;border-radius:var(--radius-md);border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-family:var(--font);outline:none}
+.qa-input:focus{border-color:var(--purple-400)}
+.quick-add-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:1.25rem}
+.quick-add-btns button{height:44px;font-size:14px;font-weight:500;border-radius:var(--radius-md);border:1.5px solid var(--border);background:transparent;color:var(--text);font-family:var(--font);cursor:pointer}
+.quick-add-btns .qa-ok{background:var(--purple-600);color:#fff;border-color:var(--purple-600)}
+.quick-add-btns .qa-detail{background:var(--bg);color:var(--purple-600);border-color:var(--purple-200)}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -272,8 +276,8 @@ body{display:flex;min-height:100vh}
   <div class="quick-add-sheet" id="quick-add-sheet">
     <div class="quick-add-handle"></div>
     <div class="quick-add-title">クイック追加</div>
-    <div class="field"><label>タスク名</label><input id="qa-title" placeholder="例：○○社史　第3章原稿" autocomplete="off"></div>
-    <div class="field"><label>カテゴリ</label><select id="qa-cat"></select></div>
+    <div class="qa-field"><label class="qa-label">タスク名</label><input id="qa-title" class="qa-input" placeholder="例：○○社史　第3章原稿" autocomplete="off"></div>
+    <div class="qa-field"><label class="qa-label">カテゴリ</label><select id="qa-cat" class="qa-input"></select></div>
     <div class="quick-add-btns">
       <button onclick="closeQuickAdd()">キャンセル</button>
       <button class="qa-detail" onclick="quickAddToDetail()">詳細</button>
