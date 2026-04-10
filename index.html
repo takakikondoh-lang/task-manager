@@ -486,7 +486,13 @@ async function pushToCloudNow(){
   const payload=JSON.stringify({tasks,nextId,catOrder,collapsed,updatedAt:Date.now(),version:dataVersion,updatedBy:DEVICE_ID,token:SECRET_TOKEN});
   try{
     const res=await fetch(GAS_URL,{method:'POST',body:payload,redirect:'follow'});
-    await res.text();
+    const text=await res.text();
+    let result;
+    try{result=JSON.parse(text);}catch(e){setSyncStatus('err','レスポンス形式エラー');return;}
+    if(!result){setSyncStatus('err','レスポンスなし');return;}
+    if(result.error){setSyncStatus('err','保存エラー: '+result.error);return;}
+    if(result.conflict){setSyncStatus('err','競合: 再読み込みしてください');return;}
+    if(!result.ok){setSyncStatus('err','保存失敗');return;}
     tasks.forEach(t=>delete t.dirty);
     localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:Date.now(),version:dataVersion,updatedBy:DEVICE_ID}));
     cloudVersionCache=dataVersion;
@@ -808,13 +814,36 @@ function exportBackup(){
   a.click();URL.revokeObjectURL(url);
 }
 
+function _validateBackup(d){
+  if(!d||typeof d!=='object')return 'データ形式が不正です';
+  if(!Array.isArray(d.tasks))return 'tasksが配列ではありません';
+  if(d.tasks.length>500)return `タスク数が上限（500件）を超えています（${d.tasks.length}件）`;
+  const REQUIRED=['id','title','cat','prio','status'];
+  const VALID_PRIO=['高','中','低'];
+  const VALID_STATUS=['進行中','完了'];
+  const VALID_CAT=['仕事','講師','プライベート','その他'];
+  for(let i=0;i<d.tasks.length;i++){
+    const t=d.tasks[i];
+    for(const f of REQUIRED){
+      if(t[f]===undefined||t[f]===null)return `タスク${i+1}番目に「${f}」がありません`;
+    }
+    if(!VALID_PRIO.includes(t.prio))return `タスク${i+1}番目の優先度が不正です: ${t.prio}`;
+    if(!VALID_STATUS.includes(t.status))return `タスク${i+1}番目のステータスが不正です: ${t.status}`;
+    if(!VALID_CAT.includes(t.cat))return `タスク${i+1}番目のカテゴリが不正です: ${t.cat}`;
+    if(typeof t.title!=='string'||t.title.length>500)return `タスク${i+1}番目のタイトルが不正です`;
+    if(t.memo&&(typeof t.memo!=='string'||t.memo.length>2000))return `タスク${i+1}番目のメモが不正です`;
+  }
+  return null;
+}
+
 function importBackup(e){
   const file=e.target.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=ev=>{
     try{
       const d=JSON.parse(ev.target.result);
-      if(!d.tasks)throw new Error('invalid');
+      const err=_validateBackup(d);
+      if(err){alert('バックアップファイルの検証に失敗しました。\n\n理由: '+err);return;}
       if(!confirm(`バックアップを復元します。現在のデータは上書きされます。\n（タスク数: ${d.tasks.length}件、保存日時: ${d.exportedAt||'不明'}）\n\nよろしいですか？`))return;
       tasks=d.tasks;
       nextId=d.nextId||tasks.length+1;
@@ -823,7 +852,7 @@ function importBackup(e){
       tasks.forEach((t,i)=>{if(t.order==null)t.order=i;if(t.status==='未着手')t.status='進行中';});
       saveData();render();
       alert('復元が完了しました。');
-    }catch(err){alert('ファイルの読み込みに失敗しました。正しいバックアップファイルか確認してください。');}
+    }catch(err){alert('ファイルの読み込みに失敗しました。正しいJSONファイルか確認してください。');}
   };
   reader.readAsText(file);
   e.target.value='';
