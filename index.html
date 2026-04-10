@@ -375,6 +375,7 @@ async function loadFromCloud(){
     // GETにtokenを載せず、POSTで読み込み専用アクションとして送信
     const res=await fetch(GAS_URL,{
       method:'POST',
+      redirect:'follow',
       body:JSON.stringify({action:'load',token:SECRET_TOKEN,origin:location.origin})
     });
     const text=await res.text();
@@ -462,6 +463,7 @@ async function pushToCloudNow(){
   try{
     const chk=await fetch(GAS_URL,{
       method:'POST',
+      redirect:'follow',
       body:JSON.stringify({action:'load',token:SECRET_TOKEN,origin:location.origin})
     });
     const chkText=await chk.text();
@@ -491,7 +493,7 @@ async function pushToCloudNow(){
 
   const payload=JSON.stringify({action:'save',tasks,nextId,catOrder,collapsed,updatedAt:Date.now(),version:dataVersion,updatedBy:DEVICE_ID,token:SECRET_TOKEN,origin:location.origin});
   try{
-    const res=await fetch(GAS_URL,{method:'POST',body:payload});
+    const res=await fetch(GAS_URL,{method:'POST',redirect:'follow',body:payload});
     const text=await res.text();
     // レスポンス検証：ok:true以外は失敗扱い
     let result;
