@@ -204,6 +204,7 @@ body{display:flex;min-height:100vh}
     <button class="add-btn" onclick="openAdd()"><span class="plus">＋</span>タスク追加</button>
     <div class="save-note" id="save-note">自動保存: —</div>
     <div class="sync-status" id="sync-status"></div>
+    <div class="save-note" id="device-id-note" style="font-size:10px;color:var(--text-3);margin-top:2px;word-break:break-all"></div>
     <button class="backup-btn" onclick="exportBackup()" title="タスクデータをJSONファイルで保存">
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8M5 7l3 3 3-3"/><rect x="2" y="11" width="12" height="3" rx="1"/></svg>
       バックアップ
@@ -297,6 +298,8 @@ const CAT_COLORS=[
   {bg:'#F1EFE8',border:'#D3D1C7',icon:'#5F5E5A',text:'#444441',prog:'#888780'},
   {bg:'#FCEBEB',border:'#F7C1C1',icon:'#A32D2D',text:'#791F1F',prog:'#E24B4A'},
 ];
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
 const CATS=['仕事','講師','プライベート','その他'];
 const STATUSES=['進行中','完了'];
 const PRIOS=['高','中','低'];
@@ -305,6 +308,15 @@ const COLLAPSED_KEY='tkm_collapsed_v1';
 const CATORDER_KEY='tkm_catorder_v1';
 const GAS_URL='https://script.google.com/macros/s/AKfycbxFy7_9z8Mdgd_uR4VKdqPHvCx7czYhoNfzJf8234XDEYua0v5gaEbwRcu0mB5af7QVzQ/exec';
 const SECRET_TOKEN='tkm-2026-kondoh';
+const DEVICE_KEY='tkm_device_id';
+
+// デバイスIDを永続生成（初回のみ）
+function getDeviceId(){
+  let id=localStorage.getItem(DEVICE_KEY);
+  if(!id){id='dev_'+Math.random().toString(36).slice(2,9);localStorage.setItem(DEVICE_KEY,id);}
+  return id;
+}
+const DEVICE_ID=getDeviceId();
 
 let tasks=[];
 let nextId=1;
@@ -312,24 +324,28 @@ let modal=null,editingId=null;
 let search='',filterStatus='進行中',filterPrio='',filterCat='';
 let collapsed={};
 let catOrder=[...CATS];
+let dataVersion=0;        // 自分が最後に読んだクラウドのversion
+let cloudVersionCache=0;  // クラウドの最新version（push前に確認用）
 
 function load(){
   try{
     const raw=localStorage.getItem(STORAGE_KEY);
     if(raw){const d=JSON.parse(raw);tasks=d.tasks||[];nextId=d.nextId||tasks.length+1;
+      dataVersion=d.version||0;
       const catMap={'社史・周年史':'仕事','座談会・インタビュー':'仕事','文字起こし・校正':'仕事','書籍・創作':'仕事','講師業':'講師'};
       tasks.forEach((t,i)=>{if(t.order==null)t.order=i;if(t.status==='未着手')t.status='進行中';if(catMap[t.cat])t.cat=catMap[t.cat];});
     }
-    else{tasks=defaultTasks();nextId=tasks.length+1;}
+    else{tasks=defaultTasks();nextId=tasks.length+1;dataVersion=0;}
     const c=localStorage.getItem(COLLAPSED_KEY);
     if(c)collapsed=JSON.parse(c);
     const co=localStorage.getItem(CATORDER_KEY);
     if(co){const saved=JSON.parse(co);catOrder=[...saved,...CATS.filter(c=>!saved.includes(c))];}
-  }catch(e){tasks=defaultTasks();nextId=tasks.length+1;}
+  }catch(e){tasks=defaultTasks();nextId=tasks.length+1;dataVersion=0;}
 }
 
 function saveData(){
-  localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:Date.now()}));
+  dataVersion++;
+  localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:Date.now(),version:dataVersion,updatedBy:DEVICE_ID}));
   localStorage.setItem(COLLAPSED_KEY,JSON.stringify(collapsed));
   localStorage.setItem(CATORDER_KEY,JSON.stringify(catOrder));
   const now=new Date();
@@ -363,60 +379,134 @@ async function loadFromCloud(){
     try{cloud=JSON.parse(text);}catch(e){return setSyncStatus('err','データ形式エラー');}
     if(!cloud.tasks)return setSyncStatus('ok','クラウド: データなし');
 
-    const dirtyTasks=tasks.filter(t=>t.dirty);
+    cloudVersionCache=cloud.version||0;
+    const cloudUpdatedAt=cloud.updatedAt||0;
+    const cloudBy=cloud.updatedBy||'不明';
+    const localUpdatedAt=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}').updatedAt||0;
 
-    if(dirtyTasks.length>0){
+    const dirtyTasks=tasks.filter(t=>t.dirty);
+    const hasDirty=dirtyTasks.length>0;
+
+    // クラウドの方が新しい＆ローカルにdirtyがある → 競合
+    if(hasDirty && cloudUpdatedAt > localUpdatedAt){
+      const cloudTime=_fmtTime(cloudUpdatedAt);
       const names=dirtyTasks.map(t=>'・'+t.title).join('\n');
-      const msg=`オフライン中に追加・編集されたタスクが${dirtyTasks.length}件あります：\n\n${names}\n\nどちらのデータを使いますか？\n\n【OK】ローカルの変更を優先してクラウドに上書き保存\n【キャンセル】クラウドのデータを使う（ローカルの変更は破棄）`;
+      const msg=
+        `⚠️ 競合を検出しました\n\n`+
+        `クラウド: ${cloudBy} / ${cloudTime} (v${cloudVersionCache})\n`+
+        `このデバイス: ${DEVICE_ID} / 未同期 ${dirtyTasks.length}件\n\n`+
+        `未同期のタスク:\n${names}\n\n`+
+        `【OK】クラウドを取り込んでから、このデバイスの変更を上書き保存\n`+
+        `【キャンセル】クラウドのデータをそのまま使う（ローカルの変更は破棄）`;
       if(confirm(msg)){
+        // クラウドをベースにローカルdirtyを上書きマージ
+        const mergedTasks=cloud.tasks.slice();
+        dirtyTasks.forEach(dt=>{
+          const idx=mergedTasks.findIndex(ct=>ct.id===dt.id);
+          if(idx>=0)mergedTasks[idx]=dt;
+          else mergedTasks.push(dt);
+        });
+        tasks=mergedTasks;
+        nextId=Math.max(cloud.nextId||0,...mergedTasks.map(t=>t.id+1));
+        if(cloud.catOrder)catOrder=cloud.catOrder;
+        if(cloud.collapsed)collapsed=cloud.collapsed;
         tasks.forEach(t=>delete t.dirty);
-        saveData();
-        setSyncStatus('ok','ローカルの変更をクラウドに保存しました');
+        dataVersion=cloudVersionCache; // クラウドのversionをベースに
+        saveData(); // これでdataVersion++されてクラウドに上書き
+        setSyncStatus('ok','競合を解決してクラウドに保存しました');
         advanceRepeating();render();
         return;
       }
+      // キャンセル → クラウドで上書き（下に流れる）
     }
 
-    const catMap={'社史・周年史':'仕事','座談会・インタビュー':'仕事','文字起こし・校正':'仕事','書籍・創作':'仕事','講師業':'講師'};
-    tasks=cloud.tasks;
-    nextId=cloud.nextId||tasks.length+1;
-    if(cloud.catOrder)catOrder=cloud.catOrder;
-    if(cloud.collapsed)collapsed=cloud.collapsed;
-    tasks.forEach((t,i)=>{if(t.order==null)t.order=i;if(t.status==='未着手')t.status='進行中';if(catMap[t.cat])t.cat=catMap[t.cat];});
-    try{
-      localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:cloud.updatedAt||Date.now()}));
-      localStorage.setItem(COLLAPSED_KEY,JSON.stringify(collapsed));
-      localStorage.setItem(CATORDER_KEY,JSON.stringify(catOrder));
-    }catch(e){}
-    setSyncStatus('ok','クラウドから読み込み済み');
-    advanceRepeating();render();
+    // クラウドが新しい（競合なし）→ 素直に取り込む
+    if(cloudUpdatedAt >= localUpdatedAt || !hasDirty){
+      const catMap={'社史・周年史':'仕事','座談会・インタビュー':'仕事','文字起こし・校正':'仕事','書籍・創作':'仕事','講師業':'講師'};
+      tasks=cloud.tasks;
+      nextId=cloud.nextId||tasks.length+1;
+      if(cloud.catOrder)catOrder=cloud.catOrder;
+      if(cloud.collapsed)collapsed=cloud.collapsed;
+      dataVersion=cloudVersionCache;
+      tasks.forEach((t,i)=>{if(t.order==null)t.order=i;if(t.status==='未着手')t.status='進行中';if(catMap[t.cat])t.cat=catMap[t.cat];});
+      try{
+        localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:cloudUpdatedAt,version:dataVersion,updatedBy:cloudBy}));
+        localStorage.setItem(COLLAPSED_KEY,JSON.stringify(collapsed));
+        localStorage.setItem(CATORDER_KEY,JSON.stringify(catOrder));
+      }catch(e){}
+      setSyncStatus('ok','クラウドから読み込み済み');
+      advanceRepeating();render();
+    }
   }catch(e){
     setSyncStatus('err','接続エラー');
   }
 }
 
+function _fmtTime(ts){
+  if(!ts)return '不明';
+  const d=new Date(ts);
+  const diff=Math.round((Date.now()-ts)/60000);
+  if(diff<1)return 'たった今';
+  if(diff<60)return diff+'分前';
+  if(diff<1440)return Math.round(diff/60)+'時間前';
+  return `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
 async function pushToCloudNow(){
-  const payload=JSON.stringify({tasks,nextId,catOrder,collapsed,updatedAt:Date.now(),token:SECRET_TOKEN});
+  // push前にクラウドのversionを確認（古い状態で上書きしない）
+  try{
+    const chk=await fetch(GAS_URL+'?t='+Date.now()+'&token='+SECRET_TOKEN+'&checkonly=1',{redirect:'follow'});
+    const chkText=await chk.text();
+    if(chkText&&chkText!=='{}'){
+      let chkData;
+      try{chkData=JSON.parse(chkText);}catch(e){}
+      if(chkData&&chkData.version&&chkData.version>dataVersion){
+        // クラウドの方が新しい → 自動マージを試みる
+        setSyncStatus('err','競合検出: クラウドが更新されています');
+        const cloudTime=_fmtTime(chkData.updatedAt||0);
+        const cloudBy=chkData.updatedBy||'不明';
+        const ok=confirm(
+          `⚠️ 保存競合\n\n`+
+          `クラウド: ${cloudBy} / ${cloudTime} (v${chkData.version})\n`+
+          `このデバイス: ${DEVICE_ID} (v${dataVersion})\n\n`+
+          `【OK】このデバイスの内容でクラウドを上書き\n`+
+          `【キャンセル】クラウドから最新データを取り込む`
+        );
+        if(!ok){
+          await loadFromCloud();
+          return;
+        }
+        // OKなら強制上書き（dataVersionをクラウドより大きくする）
+        dataVersion=chkData.version+1;
+        cloudVersionCache=dataVersion;
+      }
+    }
+  }catch(e){/* チェック失敗はそのまま続行 */}
+
+  const payload=JSON.stringify({tasks,nextId,catOrder,collapsed,updatedAt:Date.now(),version:dataVersion,updatedBy:DEVICE_ID,token:SECRET_TOKEN});
   try{
     const res=await fetch(GAS_URL,{method:'POST',body:payload,redirect:'follow'});
     await res.text();
     tasks.forEach(t=>delete t.dirty);
-    localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:Date.now()}));
-    setSyncStatus('ok','クラウド同期済み');
+    localStorage.setItem(STORAGE_KEY,JSON.stringify({tasks,nextId,updatedAt:Date.now(),version:dataVersion,updatedBy:DEVICE_ID}));
+    cloudVersionCache=dataVersion;
+    setSyncStatus('ok','クラウド同期済み (v'+dataVersion+')');
   }catch(e){
     setSyncStatus('err','同期エラー');
   }
 }
 function defaultTasks(){
+  const t=today();
+  const d=(offset)=>{const dt=new Date(t+'T00:00:00');dt.setDate(dt.getDate()+offset);return dt.toISOString().slice(0,10);};
   return [
-    {id:1,title:'コスモシステム40周年　トップインタビュー原稿仕上げ',cat:'仕事',prio:'高',deadline:'2026-04-15',status:'進行中',memo:'',order:0},
-    {id:2,title:'エース設計産業　SIer化テーマ原稿（8000字）',cat:'仕事',prio:'高',deadline:'2026-04-20',status:'進行中',memo:'',order:1},
-    {id:3,title:'三浦産業　住宅事業成長期（1999-2017）長編原稿',cat:'仕事',prio:'中',deadline:'2026-04-30',status:'進行中',memo:'',order:2},
-    {id:4,title:'木村工機　エアビーム製品技術史',cat:'仕事',prio:'中',deadline:'2026-05-10',status:'進行中',memo:'',order:3},
-    {id:5,title:'京都芸術大学50周年　文字起こし校正',cat:'仕事',prio:'高',deadline:'2026-04-12',status:'進行中',memo:'AIによる誤認識修正・固有名詞確認',order:4},
-    {id:6,title:'関西外国語大学80周年座談会　再構成・誌面設計',cat:'仕事',prio:'中',deadline:'2026-04-25',status:'進行中',memo:'',order:5},
-    {id:7,title:'村上衡器製作所120年史　トップインタビュー記事',cat:'仕事',prio:'低',deadline:'2026-05-15',status:'進行中',memo:'',order:6},
-    {id:8,title:'『物語とは何か』　校正・章立て確認',cat:'仕事',prio:'中',deadline:'2026-05-31',status:'進行中',memo:'',order:7},
+    {id:1,title:'クライアントA　周年史トップインタビュー原稿',cat:'仕事',prio:'高',deadline:d(5),status:'進行中',memo:'',order:0},
+    {id:2,title:'クライアントB　テーマ原稿（8000字）',cat:'仕事',prio:'高',deadline:d(10),status:'進行中',memo:'',order:1},
+    {id:3,title:'クライアントC　長編原稿',cat:'仕事',prio:'中',deadline:d(20),status:'進行中',memo:'',order:2},
+    {id:4,title:'クライアントD　製品技術史記事',cat:'仕事',prio:'中',deadline:d(30),status:'進行中',memo:'',order:3},
+    {id:5,title:'クライアントE　文字起こし校正',cat:'仕事',prio:'高',deadline:d(2),status:'進行中',memo:'サンプルメモ',order:4},
+    {id:6,title:'クライアントF　座談会再構成',cat:'仕事',prio:'中',deadline:d(15),status:'進行中',memo:'',order:5},
+    {id:7,title:'クライアントG　トップインタビュー記事',cat:'仕事',prio:'低',deadline:d(35),status:'進行中',memo:'',order:6},
+    {id:8,title:'書籍プロジェクト　校正・章立て確認',cat:'仕事',prio:'中',deadline:d(50),status:'進行中',memo:'',order:7},
   ];
 }
 
@@ -490,7 +580,7 @@ function render(){
         <div class="drag-handle" title="ドラッグで並べ替え"><span></span><span></span><span></span></div>
         <div class="t-check ${chkCls}" onclick="toggleDone(${t.id})" title="クリックで完了/進行中を切替"></div>
         <div class="t-title${isDone?' is-done':''} mobile-tap-edit" onclick="handleTaskTap(event,${t.id})">
-          ${t.title}${t.memo?`<div class="t-memo">${t.memo}</div>`:''}
+          ${esc(t.title)}${t.memo?`<div class="t-memo">${esc(t.memo)}</div>`:''}
         </div>
         <span class="badge ${pc} col-cat-badge">${t.prio}</span>
         ${repeatLabel?`<span class="repeat-badge">${repeatLabel}</span>`:''}
@@ -888,6 +978,9 @@ async function syncToGcal(){
 // ─────────────────────────────────────────────────
 
 load();advanceRepeating();render();
+// デバイスID表示
+const _devEl=document.getElementById('device-id-note');
+if(_devEl)_devEl.textContent='ID: '+DEVICE_ID;
 loadFromCloud();
 </script>
 </body>
