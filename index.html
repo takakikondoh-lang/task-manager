@@ -1279,7 +1279,7 @@ async function loadNews(){
     const res=await fetch(GAS_URL,{
       method:'POST',
       redirect:'follow',
-      body:JSON.stringify({action:'rss',url:'https://news.web.nhk.or.jp/n-data/conf/na/rss/cat0.xml',token:SECRET_TOKEN,origin:location.origin})
+      body:JSON.stringify({action:'rss',url:'https://www3.nhk.or.jp/rss/news/cat0.xml',token:SECRET_TOKEN,origin:location.origin})
     });
     const data=await res.json();
     if(!data.items||!data.items.length){el.innerHTML='<span class="widget-loading">取得できませんでした</span>';return;}
