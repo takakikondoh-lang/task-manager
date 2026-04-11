@@ -61,6 +61,27 @@ body{display:flex;min-height:100vh}
 .gcal-btn{border-color:var(--blue-100);color:var(--blue-600)}
 .gcal-btn:hover{background:var(--blue-50);border-color:var(--blue-400)}
 .gcal-status{font-size:10px;font-family:var(--mono);margin-top:4px;text-align:center;min-height:14px;color:var(--text-3)}
+.tools-toggle{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;margin-top:10px;padding:6px 0;font-size:11px;font-weight:600;border-radius:var(--radius-md);border:1.5px solid var(--border);background:transparent;color:var(--text-3);cursor:pointer;font-family:var(--font);letter-spacing:.04em;text-transform:uppercase;transition:all .15s}
+.tools-toggle:hover{background:var(--bg);color:var(--text-2)}
+.tools-panel{overflow:hidden;max-height:0;transition:max-height .25s cubic-bezier(.4,0,.2,1)}
+.tools-panel.open{max-height:300px}
+.mobile-preview-btn{border-color:var(--purple-200);color:var(--purple-600)}
+.mobile-preview-btn:hover{background:var(--purple-50)}
+/* モバイルプレビューモード（?mobile=1） */
+body.mobile-preview{flex-direction:column}
+body.mobile-preview .sidebar{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border);padding:0.75rem 1rem}
+body.mobile-preview .sidebar-title{display:none}
+body.mobile-preview .sidebar-add{display:none}
+body.mobile-preview .stats{display:none}
+body.mobile-preview .mobile-gcal{display:block;padding:0.75rem 0.75rem 0}
+body.mobile-preview .mobile-hide{display:none!important}
+body.mobile-preview .col-cat-badge{display:none}
+body.mobile-preview .toolbar{display:none}
+body.mobile-preview .main{padding:0.75rem 0.75rem 5rem}
+body.mobile-preview .float-add-btn{display:flex}
+body.mobile-preview .float-search-btn{display:flex}
+body.mobile-preview .dl-txt{display:block!important;min-width:auto;font-size:11px}
+body.mobile-preview .dl-txt::before{content:'〜'}
 
 /* Main content */
 .main{flex:1;min-width:0;padding:1.5rem 1.5rem 4rem}
@@ -171,6 +192,8 @@ body{display:flex;min-height:100vh}
   .mobile-hide{display:none!important}
   .mobile-tap-edit{cursor:pointer}
   .mobile-gcal{display:block;padding:0.75rem 0.75rem 0}
+  .mobile-sync-btn{border-color:var(--purple-200);color:var(--purple-600)}
+  .mobile-sync-btn:hover{background:var(--purple-50)}
   #gcal-status{display:none}
   .dl-txt{display:block!important;min-width:auto;font-size:11px}
   .dl-txt::before{content:'〜'}
@@ -226,24 +249,35 @@ body{display:flex;min-height:100vh}
     <div class="save-note" id="save-note">自動保存: —</div>
     <div class="sync-status" id="sync-status"></div>
     <div class="save-note" id="device-id-note" style="font-size:10px;color:var(--text-3);margin-top:2px;word-break:break-all"></div>
-    <button class="backup-btn" onclick="exportBackup()" title="タスクデータをJSONファイルで保存">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8M5 7l3 3 3-3"/><rect x="2" y="11" width="12" height="3" rx="1"/></svg>
-      バックアップ
-    </button>
-    <label class="backup-btn restore-btn" title="バックアップファイルから復元">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14V6M5 9l3-3 3 3"/><rect x="2" y="2" width="12" height="3" rx="1"/></svg>
-      復元
-      <input type="file" accept=".json" onchange="importBackup(event)" style="display:none">
-    </label>
-    <button class="backup-btn gcal-btn" id="gcal-btn" onclick="syncToGcal()" title="期限日のあるタスクをGoogleカレンダーに同期">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 2v2M11 2v2M2 7h12"/><path d="M5 10h2v2H5z"/></svg>
-      <span id="gcal-btn-label">Google同期</span>
-    </button>
     <div class="gcal-status" id="gcal-status"></div>
-    <button class="backup-btn" onclick="clearCache()" title="キャッシュをクリアして最新版を読み込む">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2v4H9"/><path d="M3 14v-4h4"/><path d="M13 6A6 6 0 1 0 10 13"/></svg>
-      キャッシュクリア
+    <!-- 折りたたみパネル -->
+    <button class="tools-toggle" onclick="toggleToolsPanel()" id="tools-toggle">
+      <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+      ツール <span id="tools-chevron">▶</span>
     </button>
+    <div class="tools-panel" id="tools-panel">
+      <button class="backup-btn" onclick="exportBackup()" title="タスクデータをJSONファイルで保存">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8M5 7l3 3 3-3"/><rect x="2" y="11" width="12" height="3" rx="1"/></svg>
+        バックアップ
+      </button>
+      <label class="backup-btn restore-btn" title="バックアップファイルから復元">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14V6M5 9l3-3 3 3"/><rect x="2" y="2" width="12" height="3" rx="1"/></svg>
+        復元
+        <input type="file" accept=".json" onchange="importBackup(event)" style="display:none">
+      </label>
+      <button class="backup-btn gcal-btn" id="gcal-btn" onclick="syncToGcal()" title="期限日のあるタスクをGoogleカレンダーに同期">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 2v2M11 2v2M2 7h12"/><path d="M5 10h2v2H5z"/></svg>
+        <span id="gcal-btn-label">カレンダー同期</span>
+      </button>
+      <button class="backup-btn" onclick="clearCache()" title="キャッシュをクリアして最新版を読み込む">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2v4H9"/><path d="M3 14v-4h4"/><path d="M13 6A6 6 0 1 0 10 13"/></svg>
+        キャッシュクリア
+      </button>
+      <button class="backup-btn mobile-preview-btn" onclick="toggleMobilePreview()" id="mobile-preview-btn">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="1" width="8" height="14" rx="2"/><path d="M7 12h2"/></svg>
+        モバイル版表示
+      </button>
+    </div>
   </div>
 </aside>
 
@@ -258,9 +292,14 @@ body{display:flex;min-height:100vh}
 
 <div id="groups"></div>
   <div class="mobile-gcal">
+    <div class="sync-status" id="sync-status-mobile"></div>
+    <button class="backup-btn mobile-sync-btn" onclick="loadFromCloud()">
+      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2v4H9"/><path d="M3 14v-4h4"/><path d="M13 6A6 6 0 1 0 10 13"/></svg>
+      今すぐ同期
+    </button>
     <button class="backup-btn gcal-btn" onclick="syncToGcal()">
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M5 2v2M11 2v2M2 7h12"/><path d="M5 10h2v2H5z"/></svg>
-      Google同期
+      カレンダー同期
     </button>
     <button class="backup-btn" onclick="clearCache()">
       <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2v4H9"/><path d="M3 14v-4h4"/><path d="M13 6A6 6 0 1 0 10 13"/></svg>
@@ -398,9 +437,12 @@ function pushToCloud(){
 
 function setSyncStatus(type,msg){
   const el=document.getElementById('sync-status');
-  if(!el)return;
-  el.className='sync-status sync-'+type;
-  el.textContent=msg;
+  const el2=document.getElementById('sync-status-mobile');
+  [el,el2].forEach(e=>{
+    if(!e)return;
+    e.className='sync-status sync-'+type;
+    e.textContent=msg;
+  });
 }
 
 async function loadFromCloud(){
@@ -854,6 +896,17 @@ function quickAddToDetail(){
     document.getElementById('f-cat').value=cat;
   },50);
 }
+function toggleToolsPanel(){
+  const panel=document.getElementById('tools-panel');
+  const chevron=document.getElementById('tools-chevron');
+  panel.classList.toggle('open');
+  chevron.textContent=panel.classList.contains('open')?'▼':'▶';
+}
+
+function toggleMobilePreview(){
+  window.open(location.href.split('?')[0]+'?mobile=1','_blank');
+}
+
 function openAdd(){
   modal='add';editingId=null;
   buildCatSelect();
@@ -1096,19 +1149,24 @@ async function syncToGcal(){
     }
 
     localStorage.setItem(GCAL_ID_KEY,JSON.stringify(storedIds));
-    btn.textContent='Google同期';
+    btn.textContent='カレンダー同期';
     const msg=`追加${added} 更新${updated} 削除${deleted}${skipped?` エラー${skipped}`:''}`;
     setGcalStatus('同期完了: '+msg,'var(--green-600)');
     setTimeout(()=>setGcalStatus(''),5000);
   }catch(e){
-    btn.textContent='Google同期';
+    btn.textContent='カレンダー同期';
     setGcalStatus('エラー: '+e,'var(--coral-600)');
     gcalToken=null;
   }
 }
 // ─────────────────────────────────────────────────
 
-load();advanceRepeating();render();
+load();advanceRepeating();
+// ?mobile=1 でモバイルプレビューモード
+if(new URLSearchParams(location.search).get('mobile')==='1'){
+  document.body.classList.add('mobile-preview');
+}
+render();
 // デバイスID表示
 const _devEl=document.getElementById('device-id-note');
 if(_devEl)_devEl.textContent='ID: '+DEVICE_ID;
