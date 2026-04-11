@@ -103,11 +103,21 @@ body.mobile-preview .dl-txt::before{content:'〜'}
 .weather-hour-time{color:var(--text-3);margin-bottom:2px}
 .weather-hour-temp{font-weight:700;font-family:var(--mono)}
 .news-list{display:flex;flex-direction:column}
-.news-item{padding:7px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:baseline}
+.news-item{padding:8px 0;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:3px;cursor:pointer;transition:background .1s}
 .news-item:last-child{border-bottom:none;padding-bottom:0}
-.news-item a{font-size:12px;color:var(--text);text-decoration:none;line-height:1.5;flex:1}
+.news-item:hover{background:var(--bg);margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:var(--radius-sm)}
+.news-item a{font-size:12px;color:var(--text);text-decoration:none;line-height:1.5}
 .news-item a:hover{color:var(--purple-600)}
-.news-item-date{font-size:10px;color:var(--text-3);font-family:var(--mono);flex-shrink:0;white-space:nowrap}
+.news-item-meta{display:flex;align-items:center;gap:6px}
+.news-item-time{font-size:11px;font-weight:700;font-family:var(--mono);color:var(--text-2)}
+.news-item-cat{font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;letter-spacing:.03em}
+.cat-politics{background:var(--blue-50);color:var(--blue-600)}
+.cat-economy{background:var(--amber-50);color:var(--amber-600)}
+.cat-world{background:var(--teal-50);color:var(--teal-600)}
+.cat-disaster{background:var(--coral-50);color:var(--coral-600)}
+.cat-sports{background:var(--green-50);color:var(--green-600)}
+.cat-culture{background:var(--purple-50);color:var(--purple-600)}
+.news-widget{overflow-y:auto;max-height:calc(100vh - 260px)}
 @media(max-width:960px){.main-right{display:none}}
 body.mobile-preview .main-right{display:none}
 body.mobile-preview .main-columns{display:block}
@@ -1220,6 +1230,15 @@ async function syncToGcal(){
 // ─────────────────────────────────────────────────
 
 // ── 天気・RSSウィジェット ──────────────────────────────
+function _newsCategory(title){
+  if(/政治|選挙|国会|首相|大臣|党|内閣|衆院|参院|都知事|市長/.test(title)) return {cls:'cat-politics',label:'政治'};
+  if(/経済|株|円|GDP|物価|企業|上場|倒産|予算|財政|日銀|為替/.test(title)) return {cls:'cat-economy',label:'経済'};
+  if(/アメリカ|中国|ロシア|韓国|北朝鮮|ウクライナ|イスラエル|NATO|国連|外交|海外/.test(title)) return {cls:'cat-world',label:'国際'};
+  if(/地震|台風|大雨|洪水|土砂|津波|噴火|警報|避難|災害|事故|火事|死亡|事件|殺/.test(title)) return {cls:'cat-disaster',label:'社会'};
+  if(/野球|サッカー|オリンピック|ワールドカップ|大谷|錦織|スポーツ|Ｊリーグ|優勝|決勝/.test(title)) return {cls:'cat-sports',label:'スポーツ'};
+  if(/映画|音楽|文化|芸術|文学|賞|ノーベル|芸能/.test(title)) return {cls:'cat-culture',label:'文化'};
+  return {cls:'cat-other',label:'ニュース'};
+}
 const WMO_DESC={0:'晴れ',1:'概ね晴れ',2:'一部曇り',3:'曇り',45:'霧',48:'霧',51:'小雨',53:'雨',55:'強雨',61:'小雨',63:'雨',65:'大雨',71:'小雪',73:'雪',75:'大雪',80:'にわか雨',81:'雨',82:'強雨',95:'雷雨',96:'雷雨',99:'雷雨'};
 const WMO_ICON={0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',51:'🌦',53:'🌧',55:'🌧',61:'🌦',63:'🌧',65:'🌧',71:'🌨',73:'❄️',75:'❄️',80:'🌦',81:'🌧',82:'⛈',95:'⛈',96:'⛈',99:'⛈'};
 
@@ -1285,8 +1304,15 @@ async function loadNews(){
     if(!data.items||!data.items.length){el.innerHTML='<span class="widget-loading">取得できませんでした</span>';return;}
     el.innerHTML=`<div class="news-list">${data.items.map(item=>{
       const d=item.date?new Date(item.date):null;
-      const dateStr=d?`${d.getMonth()+1}/${d.getDate()}`:'';
-      return `<div class="news-item"><a href="${esc(item.link)}" target="_blank" rel="noopener">${esc(item.title)}</a><span class="news-item-date">${dateStr}</span></div>`;
+      const timeStr=d?`${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`:'';
+      const cat=_newsCategory(item.title);
+      return `<div class="news-item">
+        <div class="news-item-meta">
+          ${timeStr?`<span class="news-item-time">${timeStr}</span>`:''}
+          <span class="news-item-cat ${cat.cls}">${cat.label}</span>
+        </div>
+        <a href="${esc(item.link)}" target="_blank" rel="noopener">${esc(item.title)}</a>
+      </div>`;
     }).join('')}</div>`;
   }catch(e){
     el.innerHTML='<span class="widget-loading">取得できませんでした</span>';
