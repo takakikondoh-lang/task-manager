@@ -262,6 +262,10 @@ body.mobile-preview .main-columns{display:block}
 .quick-add-overlay{display:none;position:fixed;inset:0;z-index:140;background:rgba(0,0,0,.3)}
 .quick-add-overlay.open{display:block}
 .quick-add-sheet{position:fixed;bottom:0;left:0;right:0;z-index:150;background:var(--surface);border-top:1.5px solid var(--border);border-radius:20px 20px 0 0;padding:1.25rem 1rem 2rem;box-shadow:0 -4px 24px rgba(0,0,0,.12);transform:translateY(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);display:none}
+@media(min-width:641px){
+  .quick-add-sheet{left:50%;right:auto;width:400px;transform:translateX(-50%) translateY(100%);border-radius:20px 20px 0 0}
+  .quick-add-sheet.open{transform:translateX(-50%) translateY(0)}
+}
 .quick-add-sheet.open{transform:translateY(0);display:block}
 .quick-add-handle{width:36px;height:4px;background:var(--border-2);border-radius:2px;margin:0 auto 1.25rem}
 .quick-add-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:1rem}
