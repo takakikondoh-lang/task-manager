@@ -1151,6 +1151,15 @@ async function syncToGcal(){
       if(r.ok||r.status===410){delete storedIds[id];deleted++;}
     }
 
+    // アプリから削除されたタスクのイベントを削除（storedIdsにあるがtasksに存在しないID）
+    const taskIds=new Set(tasks.map(t=>String(t.id)));
+    const orphanIds=Object.keys(storedIds).filter(id=>!taskIds.has(id));
+    for(const id of orphanIds){
+      const evId=storedIds[id];
+      const r=await fetch(`${GCAL_API}/${evId}`,{method:'DELETE',headers:{'Authorization':'Bearer '+gcalToken}});
+      if(r.ok||r.status===410){delete storedIds[id];deleted++;}
+    }
+
     localStorage.setItem(GCAL_ID_KEY,JSON.stringify(storedIds));
     btn.textContent='カレンダー同期';
     const msg=`追加${added} 更新${updated} 削除${deleted}${skipped?` エラー${skipped}`:''}`;
