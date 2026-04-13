@@ -1383,11 +1383,7 @@ async function loadNews(){
   const el=document.getElementById('news-content');
   if(!el)return;
   try{
-    const res=await fetch(GAS_URL,{
-      method:'POST',
-      redirect:'follow',
-      body:JSON.stringify({action:'rss',url:'https://www3.nhk.or.jp/rss/news/cat0.xml',token:SECRET_TOKEN,origin:location.origin})
-    });
+    const res=await fetch(`${GAS_URL}?action=rss&url=${encodeURIComponent('https://www3.nhk.or.jp/rss/news/cat0.xml')}&token=${SECRET_TOKEN}`,{redirect:'follow'});
     const data=await res.json();
     if(!data.items||!data.items.length){el.innerHTML='<span class="widget-loading">取得できませんでした</span>';return;}
     el.innerHTML=`<div class="news-list">${data.items.map(item=>{
@@ -1410,11 +1406,7 @@ async function loadHatebu(){
   const el=document.getElementById('hatebu-content');
   if(!el)return;
   try{
-    const res=await fetch(GAS_URL,{
-      method:'POST',
-      redirect:'follow',
-      body:JSON.stringify({action:'rss',url:'https://b.hatena.ne.jp/hotentry.rss',token:SECRET_TOKEN,origin:location.origin})
-    });
+    const res=await fetch(`${GAS_URL}?action=rss&url=${encodeURIComponent('https://b.hatena.ne.jp/hotentry.rss')}&token=${SECRET_TOKEN}`,{redirect:'follow'});
     const data=await res.json();
     if(!data.items||!data.items.length){el.innerHTML='<span class="widget-loading">取得できませんでした</span>';return;}
     el.innerHTML=`<div class="news-list">${data.items.map(item=>{
