@@ -940,6 +940,7 @@ function toggleDone(id){
   const t=tasks.find(t=>t.id===id);if(!t)return;
   if(t.status==='完了'){
     t.status='進行中';
+    delete t.completedAt;
     if(pendingDone[id]){clearTimeout(pendingDone[id]);delete pendingDone[id];}
     saveData();render();
   } else {
@@ -949,7 +950,7 @@ function toggleDone(id){
     pendingDone[id]=setTimeout(()=>{
       delete pendingDone[id];
       const t2=tasks.find(t=>t.id===id);
-      if(t2&&t2.status!=='完了'){t2.status='完了';saveData();render();}
+      if(t2&&t2.status!=='完了'){t2.status='完了';t2.completedAt=today();saveData();render();}
     },1000);
   }
 }
@@ -1058,9 +1059,19 @@ function save(){
   if(!title)return;
   const d={title,cat:document.getElementById('f-cat').value,prio:document.getElementById('f-prio').value,deadline:document.getElementById('f-dl').value,status:document.getElementById('f-status').value,repeat:document.getElementById('f-repeat').value,memo:document.getElementById('f-memo').value.trim(),dirty:true};
   if(modal==='add'){
+    if(d.status==='完了')d.completedAt=today();
     tasks.push({id:nextId++,...d,order:0});
   }
-  else{const t=tasks.find(t=>t.id===editingId);if(t)Object.assign(t,d);}
+  else{
+    const t=tasks.find(t=>t.id===editingId);
+    if(t){
+      if(d.status==='完了'&&t.status!=='完了') d.completedAt=today();
+      else if(d.status!=='完了') d.completedAt=undefined;
+      else d.completedAt=t.completedAt;
+      Object.assign(t,d);
+      if(t.completedAt===undefined)delete t.completedAt;
+    }
+  }
   reorderByDeadline(d.cat);
   saveData();closeModal();render();
 }
