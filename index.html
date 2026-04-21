@@ -1313,18 +1313,27 @@ function _newsCategory(title){
 const WMO_DESC={0:'晴れ',1:'概ね晴れ',2:'一部曇り',3:'曇り',45:'霧',48:'霧',51:'小雨',53:'雨',55:'強雨',61:'小雨',63:'雨',65:'大雨',71:'小雪',73:'雪',75:'大雪',80:'にわか雨',81:'雨',82:'強雨',95:'雷雨',96:'雷雨',99:'雷雨'};
 const WMO_ICON={0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',51:'🌦',53:'🌧',55:'🌧',61:'🌦',63:'🌧',65:'🌧',71:'🌨',73:'❄️',75:'❄️',80:'🌦',81:'🌧',82:'⛈',95:'⛈',96:'⛈',99:'⛈'};
 
-async function loadWeather(){
+async function loadWeather(forceRefresh=false){
   const el=document.getElementById('weather-content');
   if(!el)return;
   try{
-    // 現在地取得
-    const pos=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:5000}));
-    const {latitude:lat,longitude:lon}=pos.coords;
-    // 逆ジオコーディング（Open-Meteo Geocoding不要、nominatim使用）
-    const geo=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ja`);
-    const geoData=await geo.json();
-    const city=geoData.address?.city||geoData.address?.town||geoData.address?.village||'';
-    document.getElementById('weather-location').textContent=city?`— ${city}`:'';
+    let lat,lon,city;
+    const saved=localStorage.getItem('weather_location');
+    if(!forceRefresh&&saved){
+      // 保存済みの位置を使用
+      const loc=JSON.parse(saved);
+      lat=loc.lat;lon=loc.lon;city=loc.city;
+      document.getElementById('weather-location').textContent=city?`— ${city} <span style="font-size:9px;cursor:pointer;opacity:.6" onclick="loadWeather(true)" title="位置を更新">↺</span>`:'';
+    } else {
+      // 位置情報を新規取得
+      const pos=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:8000}));
+      lat=pos.coords.latitude;lon=pos.coords.longitude;
+      const geo=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ja`);
+      const geoData=await geo.json();
+      city=geoData.address?.city||geoData.address?.town||geoData.address?.village||'';
+      localStorage.setItem('weather_location',JSON.stringify({lat,lon,city}));
+      document.getElementById('weather-location').textContent=city?`— ${city} <span style="font-size:9px;cursor:pointer;opacity:.6" onclick="loadWeather(true)" title="位置を更新">↺</span>`:'';
+    }
     // 天気取得
     const url=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m&hourly=temperature_2m,weathercode&timezone=Asia%2FTokyo&forecast_days=1`;
     const w=await fetch(url);
@@ -1334,7 +1343,6 @@ async function loadWeather(){
     const hours=wd.hourly;
     const now=new Date();
     const nowH=now.getHours();
-    // 次の4時間
     const slots=[];
     for(let i=0;i<4;i++){
       const h=(nowH+i+1)%24;
@@ -1355,7 +1363,7 @@ async function loadWeather(){
       </div>`;
   }catch(e){
     if(e.code===1){
-      document.getElementById('weather-content').innerHTML='<span class="widget-loading">位置情報の許可が必要です</span>';
+      document.getElementById('weather-content').innerHTML='<span class="widget-loading" style="cursor:pointer" onclick="loadWeather(true)">位置情報を許可してタップ</span>';
     }else{
       document.getElementById('weather-content').innerHTML='<span class="widget-loading">取得できませんでした</span>';
     }
